@@ -210,115 +210,10 @@ def _install():
     SUPPORTED_ENGINES["MLX"] = MLX_CLASSES
     SUPPORTED_ENGINES["LMDEPLOY"] = LMDEPLOY_CLASSES
 
-    json_path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "llm_family.json"
-    )
-    for json_obj in json.load(codecs.open(json_path, "r", encoding="utf-8")):
-        model_spec = LLMFamilyV1.parse_obj(json_obj)
-        BUILTIN_LLM_FAMILIES.append(model_spec)
-
-        # register chat_template
-        if "chat" in model_spec.model_ability and isinstance(
-            model_spec.chat_template, str
-        ):
-            # note that the key is the model name,
-            # since there are multiple representations of the same prompt style name in json.
-            BUILTIN_LLM_PROMPT_STYLE[model_spec.model_name] = {
-                "chat_template": model_spec.chat_template,
-                "stop_token_ids": model_spec.stop_token_ids,
-                "stop": model_spec.stop,
-            }
-        # register model family
-        if "chat" in model_spec.model_ability:
-            BUILTIN_LLM_MODEL_CHAT_FAMILIES.add(model_spec.model_name)
-        else:
-            BUILTIN_LLM_MODEL_GENERATE_FAMILIES.add(model_spec.model_name)
-        if "tools" in model_spec.model_ability:
-            BUILTIN_LLM_MODEL_TOOL_CALL_FAMILIES.add(model_spec.model_name)
-
-    modelscope_json_path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "llm_family_modelscope.json"
-    )
-    for json_obj in json.load(codecs.open(modelscope_json_path, "r", encoding="utf-8")):
-        model_spec = LLMFamilyV1.parse_obj(json_obj)
-        BUILTIN_MODELSCOPE_LLM_FAMILIES.append(model_spec)
-
-        # register prompt style, in case that we have something missed
-        # if duplicated with huggingface json, keep it as the huggingface style
-        if (
-            "chat" in model_spec.model_ability
-            and isinstance(model_spec.chat_template, str)
-            and model_spec.model_name not in BUILTIN_LLM_PROMPT_STYLE
-        ):
-            BUILTIN_LLM_PROMPT_STYLE[model_spec.model_name] = {
-                "chat_template": model_spec.chat_template,
-                "stop_token_ids": model_spec.stop_token_ids,
-                "stop": model_spec.stop,
-            }
-        # register model family
-        if "chat" in model_spec.model_ability:
-            BUILTIN_LLM_MODEL_CHAT_FAMILIES.add(model_spec.model_name)
-        else:
-            BUILTIN_LLM_MODEL_GENERATE_FAMILIES.add(model_spec.model_name)
-        if "tools" in model_spec.model_ability:
-            BUILTIN_LLM_MODEL_TOOL_CALL_FAMILIES.add(model_spec.model_name)
-
-    openmind_hub_json_path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "llm_family_openmind_hub.json"
-    )
-    for json_obj in json.load(
-        codecs.open(openmind_hub_json_path, "r", encoding="utf-8")
-    ):
-        model_spec = LLMFamilyV1.parse_obj(json_obj)
-        BUILTIN_OPENMIND_HUB_LLM_FAMILIES.append(model_spec)
-
-        # register prompt style, in case that we have something missed
-        # if duplicated with huggingface json, keep it as the huggingface style
-
-        if (
-            "chat" in model_spec.model_ability
-            and isinstance(model_spec.chat_template, str)
-            and model_spec.model_name not in BUILTIN_LLM_PROMPT_STYLE
-        ):
-            BUILTIN_LLM_PROMPT_STYLE[model_spec.model_name] = {
-                "chat_template": model_spec.chat_template,
-                "stop_token_ids": model_spec.stop_token_ids,
-                "stop": model_spec.stop,
-            }
-        # register model family
-        if "chat" in model_spec.model_ability:
-            BUILTIN_LLM_MODEL_CHAT_FAMILIES.add(model_spec.model_name)
-        else:
-            BUILTIN_LLM_MODEL_GENERATE_FAMILIES.add(model_spec.model_name)
-        if "tools" in model_spec.model_ability:
-            BUILTIN_LLM_MODEL_TOOL_CALL_FAMILIES.add(model_spec.model_name)
-
-    csghub_json_path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "llm_family_csghub.json"
-    )
-    for json_obj in json.load(codecs.open(csghub_json_path, "r", encoding="utf-8")):
-        model_spec = LLMFamilyV1.parse_obj(json_obj)
-        BUILTIN_CSGHUB_LLM_FAMILIES.append(model_spec)
-
-        # register prompt style, in case that we have something missed
-        # if duplicated with huggingface json, keep it as the huggingface style
-        if (
-            "chat" in model_spec.model_ability
-            and isinstance(model_spec.chat_template, str)
-            and model_spec.model_name not in BUILTIN_LLM_PROMPT_STYLE
-        ):
-            BUILTIN_LLM_PROMPT_STYLE[model_spec.model_name] = {
-                "chat_template": model_spec.chat_template,
-                "stop_token_ids": model_spec.stop_token_ids,
-                "stop": model_spec.stop,
-            }
-        # register model family
-        if "chat" in model_spec.model_ability:
-            BUILTIN_LLM_MODEL_CHAT_FAMILIES.add(model_spec.model_name)
-        else:
-            BUILTIN_LLM_MODEL_GENERATE_FAMILIES.add(model_spec.model_name)
-        if "tools" in model_spec.model_ability:
-            BUILTIN_LLM_MODEL_TOOL_CALL_FAMILIES.add(model_spec.model_name)
+    load_families("llm_family.json", BUILTIN_LLM_FAMILIES)
+    load_families("llm_family_modelscope.json", BUILTIN_MODELSCOPE_LLM_FAMILIES)
+    load_families("llm_family_openmind_hub.json", BUILTIN_OPENMIND_HUB_LLM_FAMILIES)
+    load_families("llm_family_csghub.json", BUILTIN_CSGHUB_LLM_FAMILIES)
 
     for llm_specs in [
         BUILTIN_LLM_FAMILIES,
@@ -345,3 +240,30 @@ def _install():
     # register model description
     for ud_llm in get_user_defined_llm_families():
         LLM_MODEL_DESCRIPTIONS.update(generate_llm_description(ud_llm))
+
+def load_families(json_file, builtin_families):
+    json_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), json_file
+    )
+    for json_obj in json.load(codecs.open(json_path, "r", encoding="utf-8")):
+        model_spec = LLMFamilyV1.parse_obj(json_obj)
+        builtin_families.append(model_spec)
+
+        # register chat_template
+        if "chat" in model_spec.model_ability and isinstance(
+            model_spec.chat_template, str
+        ):
+            # note that the key is the model name,
+            # since there are multiple representations of the same prompt style name in json.
+            BUILTIN_LLM_PROMPT_STYLE[model_spec.model_name] = {
+                "chat_template": model_spec.chat_template,
+                "stop_token_ids": model_spec.stop_token_ids,
+                "stop": model_spec.stop,
+            }
+        # register model family
+        if "chat" in model_spec.model_ability:
+            BUILTIN_LLM_MODEL_CHAT_FAMILIES.add(model_spec.model_name)
+        else:
+            BUILTIN_LLM_MODEL_GENERATE_FAMILIES.add(model_spec.model_name)
+        if "tools" in model_spec.model_ability:
+            BUILTIN_LLM_MODEL_TOOL_CALL_FAMILIES.add(model_spec.model_name)
