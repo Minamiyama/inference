@@ -15,6 +15,7 @@
 import codecs
 import json
 import os
+from typing import Dict
 import warnings
 
 from .core import (
@@ -25,14 +26,11 @@ from .core import (
     get_llm_model_descriptions,
 )
 from .llm_family import (
-    BUILTIN_CSGHUB_LLM_FAMILIES,
     BUILTIN_LLM_FAMILIES,
     BUILTIN_LLM_MODEL_CHAT_FAMILIES,
     BUILTIN_LLM_MODEL_GENERATE_FAMILIES,
     BUILTIN_LLM_MODEL_TOOL_CALL_FAMILIES,
     BUILTIN_LLM_PROMPT_STYLE,
-    BUILTIN_MODELSCOPE_LLM_FAMILIES,
-    BUILTIN_OPENMIND_HUB_LLM_FAMILIES,
     LLAMA_CLASSES,
     LLM_ENGINES,
     LMDEPLOY_CLASSES,
@@ -54,6 +52,7 @@ from .llm_family import (
     unregister_llm,
 )
 
+BUILTIN_LLM_MODEL_FAMILIES: Dict[str, "LLMFamilyV1"] = {}
 
 def check_format_with_engine(model_format, engine):
     # only llama-cpp-python support and only support ggufv2
@@ -62,7 +61,6 @@ def check_format_with_engine(model_format, engine):
     if model_format not in ["ggufv2"] and engine == "llama.cpp":
         return False
     return True
-
 
 def generate_engine_config_by_model_family(model_family):
     model_name = model_family.model_name
@@ -110,7 +108,6 @@ def generate_engine_config_by_model_family(model_family):
                         engines[engine] = engine_params
                         break
     LLM_ENGINES[model_name] = engines
-
 
 def register_custom_model():
     from ...constants import XINFERENCE_MODEL_DIR
@@ -210,30 +207,21 @@ def _install():
     SUPPORTED_ENGINES["MLX"] = MLX_CLASSES
     SUPPORTED_ENGINES["LMDEPLOY"] = LMDEPLOY_CLASSES
 
-    load_families("llm_family.json", BUILTIN_LLM_FAMILIES)
-    load_families("llm_family_modelscope.json", BUILTIN_MODELSCOPE_LLM_FAMILIES)
-    load_families("llm_family_openmind_hub.json", BUILTIN_OPENMIND_HUB_LLM_FAMILIES)
-    load_families("llm_family_csghub.json", BUILTIN_CSGHUB_LLM_FAMILIES)
+    load_families("llm_family.json")
+    load_families("llm_family_modelscope.json")
+    load_families("llm_family_openmind_hub.json")
+    load_families("llm_family_csghub.json")
+    
+    BUILTIN_LLM_FAMILIES.extend(BUILTIN_LLM_MODEL_FAMILIES.values())
+    del BUILTIN_LLM_MODEL_FAMILIES
 
-    for llm_specs in [
-        BUILTIN_LLM_FAMILIES,
-        BUILTIN_MODELSCOPE_LLM_FAMILIES,
-        BUILTIN_OPENMIND_HUB_LLM_FAMILIES,
-        BUILTIN_CSGHUB_LLM_FAMILIES,
-    ]:
-        for llm_spec in llm_specs:
-            if llm_spec.model_name not in LLM_MODEL_DESCRIPTIONS:
-                LLM_MODEL_DESCRIPTIONS.update(generate_llm_description(llm_spec))
+    for llm_spec in BUILTIN_LLM_FAMILIES:
+        if llm_spec.model_name not in LLM_MODEL_DESCRIPTIONS:
+            LLM_MODEL_DESCRIPTIONS.update(generate_llm_description(llm_spec))
 
     # traverse all families and add engine parameters corresponding to the model name
-    for families in [
-        BUILTIN_LLM_FAMILIES,
-        BUILTIN_MODELSCOPE_LLM_FAMILIES,
-        BUILTIN_OPENMIND_HUB_LLM_FAMILIES,
-        BUILTIN_CSGHUB_LLM_FAMILIES,
-    ]:
-        for family in families:
-            generate_engine_config_by_model_family(family)
+    for family in BUILTIN_LLM_FAMILIES:
+        generate_engine_config_by_model_family(family)
 
     register_custom_model()
 
@@ -241,13 +229,16 @@ def _install():
     for ud_llm in get_user_defined_llm_families():
         LLM_MODEL_DESCRIPTIONS.update(generate_llm_description(ud_llm))
 
-def load_families(json_file, builtin_families):
-    json_path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), json_file
-    )
+
+def load_families(json_file):
+    json_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), json_file)
     for json_obj in json.load(codecs.open(json_path, "r", encoding="utf-8")):
-        model_spec = LLMFamilyV1.parse_obj(json_obj)
-        builtin_families.append(model_spec)
+        model_spec: LLMFamilyV1 = LLMFamilyV1.parse_obj(json_obj)
+
+        if model_spec.model_name not in BUILTIN_LLM_MODEL_FAMILIES:
+            BUILTIN_LLM_MODEL_FAMILIES[model_spec.model_name] = model_spec
+        else:
+            BUILTIN_LLM_MODEL_FAMILIES[model_spec.model_name].model_specs.extend(model_spec.model_specs)
 
         # register chat_template
         if "chat" in model_spec.model_ability and isinstance(

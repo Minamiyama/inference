@@ -58,7 +58,6 @@ BUILTIN_LLM_MODEL_CHAT_FAMILIES: Set[str] = set()
 BUILTIN_LLM_MODEL_GENERATE_FAMILIES: Set[str] = set()
 BUILTIN_LLM_MODEL_TOOL_CALL_FAMILIES: Set[str] = set()
 
-
 class LlamaCppLLMSpecV1(BaseModel):
     model_format: Literal["ggufv2"]
     # Must in order that `str` first, then `int`
@@ -241,9 +240,6 @@ CustomLLMFamilyV1.update_forward_refs()
 LLAMA_CLASSES: List[Type[LLM]] = []
 
 BUILTIN_LLM_FAMILIES: List["LLMFamilyV1"] = []
-BUILTIN_MODELSCOPE_LLM_FAMILIES: List["LLMFamilyV1"] = []
-BUILTIN_OPENMIND_HUB_LLM_FAMILIES: List["LLMFamilyV1"] = []
-BUILTIN_CSGHUB_LLM_FAMILIES: List["LLMFamilyV1"] = []
 
 SGLANG_CLASSES: List[Type[LLM]] = []
 TRANSFORMERS_CLASSES: List[Type[LLM]] = []
@@ -886,7 +882,7 @@ def get_cache_status(
             return check_revision_status(
                 meta_paths["huggingface"], BUILTIN_LLM_FAMILIES, q
             ) or check_revision_status(
-                meta_paths["modelscope"], BUILTIN_MODELSCOPE_LLM_FAMILIES, q
+                meta_paths["modelscope"], BUILTIN_LLM_FAMILIES, q
             )
         else:
             return check_file_status(meta_paths["huggingface"]) or check_file_status(
@@ -979,23 +975,29 @@ def match_llm(
     # priority: download_hub > download_from_modelscope() and download_from_csghub()
     # set base model
     base_families = BUILTIN_LLM_FAMILIES + user_defined_llm_families
-    hub_families_map = {
-        "modelscope": BUILTIN_MODELSCOPE_LLM_FAMILIES,
-        "openmind_hub": BUILTIN_OPENMIND_HUB_LLM_FAMILIES,
-        "csghub": BUILTIN_CSGHUB_LLM_FAMILIES,
-    }
-    if download_hub == "huggingface":
-        all_families = base_families
-    elif download_hub in hub_families_map:
-        all_families = hub_families_map[download_hub] + base_families
+    
+    hub_list = ["huggingface", "modelscope", "openmind_hub", "csghub"]
+    
+    priority = "huggingface"
+    
+    if download_hub in hub_list:
+        priority = download_hub
     elif download_from_modelscope():
-        all_families = BUILTIN_MODELSCOPE_LLM_FAMILIES + base_families
+        priority = "modelscope"
     elif download_from_openmind_hub():
-        all_families = BUILTIN_OPENMIND_HUB_LLM_FAMILIES + base_families
+        priority = "openmind_hub"
     elif download_from_csghub():
-        all_families = BUILTIN_CSGHUB_LLM_FAMILIES + base_families
-    else:
-        all_families = base_families
+        priority = "csghub"
+        
+    sorted_hub_list = sorted(hub_list, key=lambda x: x != priority)
+        
+    priority_order = {model_hub: index for index, model_hub in enumerate(sorted_hub_list)}
+    for model_family in BUILTIN_LLM_FAMILIES:
+        model_family.model_specs = sorted(model_family.model_specs, key=lambda x: priority_order[x["model_hub"]])
+    
+    # # 利用排序稳定性，给符合优先条件的返回0，不符合的返回1
+    # all_families = sorted(BUILTIN_LLM_FAMILIES, key=lambda x: x["model_hub"] != priority) + user_defined_llm_families
+    all_families = BUILTIN_LLM_FAMILIES
 
     for family in all_families:
         if model_name != family.model_name:
