@@ -8067,8 +8067,6 @@
         "model_format": "pytorch",
         "model_size_in_billions": 7,
         "quantizations": [
-          "4-bit",
-          "8-bit",
           "none"
         ],
         "model_id": "XGenerationLab/XiYanSQL-QwenCoder-7B-2504"
@@ -8077,8 +8075,6 @@
         "model_format": "pytorch",
         "model_size_in_billions": 32,
         "quantizations": [
-          "4-bit",
-          "8-bit",
           "none"
         ],
         "model_id": "XGenerationLab/XiYanSQL-QwenCoder-32B-2504"
