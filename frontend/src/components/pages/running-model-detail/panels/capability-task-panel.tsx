@@ -361,8 +361,13 @@ const CapabilityTaskPanel = forwardRef<CapabilityTaskPanelMethod, CapabilityTask
           </Form>
         </section>
 
-        <section className="relative min-w-0 overflow-hidden rounded-xl border bg-background shadow-sm">
-          <div className="flex items-center justify-between border-b bg-card/80 p-4">
+        <section
+          className={cn(
+            'relative min-w-0 overflow-hidden rounded-xl border bg-background shadow-sm',
+            config.ability === ModelAbility.Embed && 'flex h-[calc(100dvh-216px)] min-h-0 flex-col'
+          )}
+        >
+          <div className="flex shrink-0 items-center justify-between border-b bg-card/80 p-4">
             <h3 className="text-base font-semibold">Results</h3>
             {showCopyResult && copyResultValue && !loading && (
               <Button
@@ -377,7 +382,14 @@ const CapabilityTaskPanel = forwardRef<CapabilityTaskPanelMethod, CapabilityTask
               </Button>
             )}
           </div>
-          <div className="min-w-0 p-4">
+          <div
+            className={cn(
+              'min-w-0 p-4',
+              config.ability === ModelAbility.Embed &&
+                'min-h-0 flex-1 overflow-auto overscroll-contain'
+            )}
+            tabIndex={config.ability === ModelAbility.Embed ? 0 : undefined}
+          >
             <ResultPanel
               result={result}
               values={resultValues}
