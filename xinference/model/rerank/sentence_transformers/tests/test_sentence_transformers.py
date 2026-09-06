@@ -1,8 +1,11 @@
+import asyncio
+import contextlib
 import shutil
 from unittest.mock import MagicMock
 
 import pytest
 
+from ....batch import BatchMixin
 from ...cache_manager import RerankCacheManager
 from ...core import RerankModelFamilyV2, TransformersRerankSpecV1
 from ...rerank_family import BUILTIN_RERANK_MODELS
@@ -185,4 +188,30 @@ def test_qwen3_vl_batch_isolation():
             ),
             {},
         ),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_qwen3_vl_batch_skips_empty_request():
+    model = SentenceTransformerRerankModel.__new__(SentenceTransformerRerankModel)
+    model._vl_reranker = MagicMock()
+    model._vl_reranker.process.return_value = [0.9]
+    model._counter = 0
+    model.batch_interval = 0.01
+    BatchMixin.__init__(model, model.rerank)
+
+    try:
+        normal, empty = await asyncio.gather(
+            model.rerank(["A"], "Q1", None, None, True, False),
+            model.rerank([], "Q2", None, None, True, False),
+        )
+    finally:
+        model._process_batch_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await model._process_batch_task
+
+    assert normal["results"][0]["document"]["text"] == "A"
+    assert empty["results"] == []
+    assert model._vl_reranker.process.call_args_list == [
+        (({"query": {"text": "Q1"}, "documents": [{"text": "A"}]},), {})
     ]

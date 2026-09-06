@@ -575,6 +575,8 @@ class SentenceTransformerRerankModel(RerankModel, BatchMixin):
 
         scores = []
         for offset, size in batch_offsets:
+            if size == 0:
+                continue
             scores.extend(
                 process_request(query[offset], documents[offset : offset + size])
             )
