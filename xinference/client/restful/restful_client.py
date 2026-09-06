@@ -166,8 +166,8 @@ class RESTfulEmbeddingModelHandle(RESTfulModelHandle):
 class RESTfulRerankModelHandle(RESTfulModelHandle):
     def rerank(
         self,
-        documents: List[str],
-        query: str,
+        documents: List[Union[str, Dict[str, Any]]],
+        query: Union[str, Dict[str, Any]],
         top_n: Optional[int] = None,
         max_chunks_per_doc: Optional[int] = None,
         return_documents: Optional[bool] = None,
@@ -179,10 +179,10 @@ class RESTfulRerankModelHandle(RESTfulModelHandle):
 
         Parameters
         ----------
-        query: str
-            The search query
-        documents: List[str]
-            The documents to rerank
+        query: Union[str, Dict[str, Any]]
+            Text or multimodal query.
+        documents: List[Union[str, Dict[str, Any]]]
+            Text or multimodal documents to rerank.
         top_n: int
             The number of results to return, defaults to returning all results
         max_chunks_per_doc: int

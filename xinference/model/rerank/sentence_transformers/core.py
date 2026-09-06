@@ -361,8 +361,8 @@ class SentenceTransformerRerankModel(RerankModel, BatchMixin):
 
     def _rerank(
         self,
-        documents: List[str],
-        query: List[str],
+        documents: List[Any],
+        query: List[Any],
         top_n: Optional[int],
         max_chunks_per_doc: Optional[int],
         return_documents: Optional[bool],
@@ -568,8 +568,8 @@ class SentenceTransformerRerankModel(RerankModel, BatchMixin):
     @extensible
     def rerank(
         self,
-        documents: List[str],
-        query: str,
+        documents: List[Any],
+        query: Any,
         top_n: Optional[int] = None,
         max_chunks_per_doc: Optional[int] = None,
         return_documents: Optional[bool] = True,

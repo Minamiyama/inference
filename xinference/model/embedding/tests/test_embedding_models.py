@@ -94,6 +94,8 @@ def test_multimodal_model_abilities_are_exposed():
             "video",
             "audio",
         ],
+        "gme-Qwen2-VL-2B-Instruct": ["vision"],
+        "gme-Qwen2-VL-7B-Instruct": ["vision"],
         "Qwen3-VL-Embedding-2B": ["vision", "video"],
         "Qwen3-VL-Embedding-8B": ["vision", "video"],
         "WeMM-Embedding-2B": ["vision", "video"],

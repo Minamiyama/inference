@@ -50,8 +50,8 @@ class CreateEmbeddingRequest(BaseModel):
 
 class RerankRequest(BaseModel):
     model: str
-    query: str
-    documents: List[str]
+    query: Union[str, Dict[str, Any]]
+    documents: List[Union[str, Dict[str, Any]]]
     top_n: Optional[int] = None
     return_documents: Optional[bool] = False
     return_len: Optional[bool] = False

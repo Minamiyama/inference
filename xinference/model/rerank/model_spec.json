@@ -799,6 +799,9 @@
     "version": 2,
     "model_name": "jina-reranker-m0",
     "type": "normal",
+    "model_ability": [
+      "vision"
+    ],
     "language": [
       "en",
       "zh",

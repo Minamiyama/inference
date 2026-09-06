@@ -25,10 +25,15 @@ TEST_MODEL_SPEC = RerankModelFamilyV2(
 
 
 def test_multimodal_model_abilities_are_exposed():
-    for model_name in ("Qwen3-VL-Reranker-2B", "Qwen3-VL-Reranker-8B"):
+    expected = {
+        "Qwen3-VL-Reranker-2B": ["vision", "video"],
+        "Qwen3-VL-Reranker-8B": ["vision", "video"],
+        "jina-reranker-m0": ["vision"],
+    }
+    for model_name, abilities in expected.items():
         family = BUILTIN_RERANK_MODELS[model_name][0]
-        assert family.model_ability == ["vision", "video"]
-        assert family.to_description()["model_ability"] == ["rerank", "vision", "video"]
+        assert family.model_ability == abilities
+        assert family.to_description()["model_ability"] == ["rerank", *abilities]
 
 
 async def test_model():

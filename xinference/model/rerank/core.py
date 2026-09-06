@@ -15,7 +15,7 @@ import logging
 import os
 from abc import abstractmethod
 from collections import defaultdict
-from typing import Annotated, Dict, List, Literal, Optional, Tuple, Union
+from typing import Annotated, Any, Dict, List, Literal, Optional, Tuple, Union
 
 from ..._compat import BaseModel, Field
 from ...constants import XINFERENCE_TRUST_REMOTE_CODE
@@ -216,8 +216,8 @@ class RerankModel:
     @abstractmethod
     def rerank(
         self,
-        documents: List[str],
-        query: str,
+        documents: List[Any],
+        query: Any,
         top_n: Optional[int],
         max_chunks_per_doc: Optional[int],
         return_documents: Optional[bool],

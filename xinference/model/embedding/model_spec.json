@@ -1738,6 +1738,9 @@
     "model_name": "gme-Qwen2-VL-2B-Instruct",
     "dimensions": 1536,
     "max_tokens": 32768,
+    "model_ability": [
+      "vision"
+    ],
     "language": [
       "en",
       "zh"
@@ -1778,6 +1781,9 @@
     "model_name": "gme-Qwen2-VL-7B-Instruct",
     "dimensions": 3584,
     "max_tokens": 32768,
+    "model_ability": [
+      "vision"
+    ],
     "language": [
       "en",
       "zh"
