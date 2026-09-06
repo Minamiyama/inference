@@ -483,6 +483,7 @@ const ko = {
     reasoning: '추론',
     tools: '도구 사용',
     audio: '오디오 처리',
+    video: '비디오 처리',
     omni: '멀티모달 (Omni)',
     hybrid: '하이브리드 기능',
     text2image: '텍스트에서 이미지',

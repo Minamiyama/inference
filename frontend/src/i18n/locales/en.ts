@@ -497,6 +497,7 @@ const en = {
     reasoning: 'Reasoning',
     tools: 'Tool Use',
     audio: 'Audio Processing',
+    video: 'Video Processing',
     omni: 'Multimodal (Omni)',
     hybrid: 'Hybrid Capability',
     text2image: 'Text to Image',

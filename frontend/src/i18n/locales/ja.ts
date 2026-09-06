@@ -484,6 +484,7 @@ const ja = {
     reasoning: '推論',
     tools: 'ツール使用',
     audio: '音声処理',
+    video: '動画処理',
     omni: 'マルチモーダル (Omni)',
     hybrid: 'ハイブリッド機能',
     text2image: 'テキストから画像',

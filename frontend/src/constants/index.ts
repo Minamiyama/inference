@@ -50,6 +50,7 @@ export enum ModelAbility {
   Tools = 'tools',
   Reasoning = 'reasoning',
   Audio = 'audio',
+  Video = 'video',
   Omni = 'omni',
   Hybrid = 'hybrid',
   Embed = 'embed',

@@ -474,6 +474,7 @@ const zh = {
     reasoning: '推理能力',
     tools: '工具使用能力',
     audio: '音频处理',
+    video: '视频处理',
     omni: '全模态',
     hybrid: '混合能力',
     text2image: '文生图',

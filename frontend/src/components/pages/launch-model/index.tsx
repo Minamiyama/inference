@@ -70,9 +70,7 @@ const LaunchModel = ({ routeType, initialCustomType }: LaunchModelProps) => {
   const [deleteModel, setDeleteModel] = useState<CatalogModel>();
   const handledLaunchTargetRef = useRef('');
   const requestType = isCustomRoute ? customType : (routeType as RequestModelType);
-  const showAbilityFilter = ![ModelType.Embedding, ModelType.Rerank, ModelType.Custom].includes(
-    routeType
-  );
+  const showAbilityFilter = routeType !== ModelType.Custom;
   const showStatusFilter = !isCustomRoute;
 
   const statusOptions = [
