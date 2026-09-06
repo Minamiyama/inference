@@ -23,7 +23,7 @@ prune frontend/.npm-logs
 # into the sdist and wheel; trim the package payload back to code plus the
 # data declared above, and keep repository-only trees out of the sdist.
 recursive-exclude xinference *
-recursive-include xinference *.py *.json *.pyx *.pxd
+recursive-include xinference *.py *.json *.pyx *.pxd *.jinja
 recursive-exclude xinference/deploy/docker *.py
 graft xinference/thirdparty
 graft xinference/ui/web/dist

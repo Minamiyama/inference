@@ -1,4 +1,8 @@
 import shutil
+import sys
+import types
+from types import SimpleNamespace
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -21,6 +25,74 @@ TEST_MODEL_SPEC = RerankModelFamilyV2(
         )
     ],
 )
+
+
+def test_qwen3_vl_load_configures_vllm(monkeypatch):
+    from .. import core
+
+    llm = MagicMock()
+    llm.return_value.get_tokenizer.return_value = MagicMock()
+    fake_vllm = types.ModuleType("vllm")
+    fake_vllm.LLM = llm
+    fake_vllm.__version__ = "0.14.0"
+    monkeypatch.setitem(sys.modules, "vllm", fake_vllm)
+    monkeypatch.setattr(core, "is_vacc_available", lambda: False)
+
+    model = object.__new__(VLLMRerankModel)
+    model._kwargs = {}
+    model._model_path = "/model"
+    model.model_family = SimpleNamespace(model_name="Qwen3-VL-Reranker-2B")
+    model.load()
+
+    kwargs = llm.call_args.kwargs
+    assert kwargs["runner"] == "pooling"
+    assert kwargs["hf_overrides"] == {
+        "architectures": ["Qwen3VLForSequenceClassification"],
+        "classifier_from_token": ["no", "yes"],
+        "is_original_qwen3_reranker": True,
+    }
+    assert "<|im_start|>system" in model._qwen3_vl_reranker_template
+
+
+def test_qwen3_vl_rerank_converts_multimodal_inputs():
+    model = object.__new__(VLLMRerankModel)
+    model.model_family = SimpleNamespace(model_name="Qwen3-VL-Reranker-2B")
+    model._model = MagicMock()
+    model._counter = 0
+    model._qwen3_vl_reranker_template = "template"
+
+    model._rerank(
+        documents=[{"text": "document", "image": "https://example.com/image.jpg"}],
+        query={"video": "https://example.com/video.mp4"},
+    )
+
+    assert model._model.score.call_args.args == (
+        [
+            {
+                "content": [
+                    {
+                        "type": "video_url",
+                        "video_url": {"url": "https://example.com/video.mp4"},
+                    }
+                ]
+            }
+        ],
+        [
+            {
+                "content": [
+                    {"type": "text", "text": "document"},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": "https://example.com/image.jpg"},
+                    },
+                ]
+            }
+        ],
+    )
+    assert model._model.score.call_args.kwargs == {
+        "use_tqdm": False,
+        "chat_template": "template",
+    }
 
 
 @pytest.mark.skipif(VLLMRerankModel.check_lib() != True, reason="vllm not installed")
