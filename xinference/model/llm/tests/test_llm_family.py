@@ -1999,3 +1999,92 @@ def test_kimi_k3_virtualenv_engine_discovery(monkeypatch):
     )
     assert 'vllm>=0.27.0 ; #engine# == "vllm"' in family.virtualenv.packages
     assert vllm_core._get_virtualenv_vllm_version(family) == version.parse("0.27.0")
+
+
+def test_register_builtin_model_is_idempotent():
+    # Worker.update_model_type() calls register_builtin_model() again on
+    # every runtime hub-refresh, on the same already-imported process. The
+    # LLM_ENGINES entries were already guarded against duplication (see
+    # generate_engine_config_by_model_family's already_exists check); the
+    # SUPPORTED_ENGINES class lists were not.
+    import xinference.model.llm as llm_module
+
+    from ..llm_family import BUILTIN_LLM_FAMILIES, LLM_ENGINES, SUPPORTED_ENGINES
+
+    llm_module.register_builtin_model()
+    model_name = next(iter(LLM_ENGINES))
+    baseline_classes = {
+        engine: list(classes) for engine, classes in SUPPORTED_ENGINES.items()
+    }
+    baseline_engine_entries = sum(
+        len(specs) for specs in LLM_ENGINES[model_name].values()
+    )
+    baseline_family_count = len(BUILTIN_LLM_FAMILIES)
+
+    for _ in range(3):
+        llm_module.register_builtin_model()
+
+    assert {
+        engine: list(classes) for engine, classes in SUPPORTED_ENGINES.items()
+    } == baseline_classes
+    assert (
+        sum(len(specs) for specs in LLM_ENGINES[model_name].values())
+        == baseline_engine_entries
+    )
+    # BUILTIN_LLM_FAMILIES itself must not grow either: load_model_family_from_json
+    # unconditionally appended every family on every refresh, independent of the
+    # engine-class and engine-entry guards above.
+    assert len(BUILTIN_LLM_FAMILIES) == baseline_family_count
+
+
+def test_register_builtin_model_preserves_and_removes_downloaded_provenance(
+    tmp_path, monkeypatch
+):
+    import json
+    import os
+
+    from .... import constants
+    from .. import register_builtin_model
+    from ..core import LLM_VERSION_INFOS
+    from ..llm_family import (
+        BUILTIN_LLM_FAMILIES,
+        BUILTIN_LLM_MODEL_GENERATE_FAMILIES,
+        LLM_ENGINES,
+    )
+
+    monkeypatch.setattr(constants, "XINFERENCE_MODEL_DIR", str(tmp_path))
+
+    import xinference.model.llm as llm_module
+
+    spec_path = os.path.join(os.path.dirname(llm_module.__file__), "llm_family.json")
+    with open(spec_path) as f:
+        downloaded_entry = json.load(f)[0]
+    model_name = "downloaded-only-llm-refresh-test"
+    downloaded_entry["model_name"] = model_name
+
+    builtin_dir = os.path.join(str(tmp_path), "v2", "builtin", "llm")
+    os.makedirs(builtin_dir, exist_ok=True)
+    catalog_path = os.path.join(builtin_dir, "llm_models.json")
+    with open(catalog_path, "w") as f:
+        json.dump([downloaded_entry], f)
+
+    register_builtin_model()
+    active = [f for f in BUILTIN_LLM_FAMILIES if f.model_name == model_name]
+    assert len(active) == 1
+    assert active[0].is_builtin is False
+    assert model_name in BUILTIN_LLM_MODEL_GENERATE_FAMILIES
+    assert model_name in LLM_ENGINES
+    assert model_name in LLM_VERSION_INFOS
+
+    register_builtin_model()
+    active = [f for f in BUILTIN_LLM_FAMILIES if f.model_name == model_name]
+    assert len(active) == 1
+    assert active[0].is_builtin is False
+
+    with open(catalog_path, "w") as f:
+        json.dump([], f)
+    register_builtin_model()
+    assert not any(f.model_name == model_name for f in BUILTIN_LLM_FAMILIES)
+    assert model_name not in BUILTIN_LLM_MODEL_GENERATE_FAMILIES
+    assert model_name not in LLM_ENGINES
+    assert model_name not in LLM_VERSION_INFOS
