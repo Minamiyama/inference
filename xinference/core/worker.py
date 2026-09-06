@@ -3039,8 +3039,14 @@ class WorkerActor(xo.StatelessActor):
         from ..model.llm.core import LLM
 
         ability_map = {
-            "embedding": ["embed"],
-            "rerank": ["rerank"],
+            "embedding": [
+                "embed",
+                *getattr(model.model_family, "model_ability", []),
+            ],
+            "rerank": [
+                "rerank",
+                *getattr(model.model_family, "model_ability", []),
+            ],
             "flexible": ["flexible"],
         }
         if model_type in ability_map:

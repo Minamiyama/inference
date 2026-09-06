@@ -80,6 +80,33 @@ def test_engine_supported():
     assert "sentence_transformers" in EMBEDDING_ENGINES[model_name]
 
 
+def test_multimodal_model_abilities_are_exposed():
+    expected = {
+        "jina-clip-v2": ["vision"],
+        "jina-embeddings-v4": ["vision"],
+        "jina-embeddings-v5-omni-nano": [
+            "vision",
+            "video",
+            "audio",
+        ],
+        "jina-embeddings-v5-omni-small": [
+            "vision",
+            "video",
+            "audio",
+        ],
+        "Qwen3-VL-Embedding-2B": ["vision", "video"],
+        "Qwen3-VL-Embedding-8B": ["vision", "video"],
+        "WeMM-Embedding-2B": ["vision", "video"],
+        "WeMM-Embedding-4B": ["vision", "video"],
+        "WeMM-Embedding-9B": ["vision", "video"],
+    }
+
+    for model_name, abilities in expected.items():
+        family = BUILTIN_EMBEDDING_MODELS[model_name][0]
+        assert family.model_ability == abilities
+        assert family.to_description()["model_ability"] == ["embed", *abilities]
+
+
 def test_jina_v5_requires_transformers_5_compatible_sentence_transformers():
     from packaging.requirements import InvalidRequirement, Requirement
     from packaging.utils import canonicalize_name

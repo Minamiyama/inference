@@ -5,6 +5,7 @@ import pytest
 
 from ...cache_manager import RerankCacheManager
 from ...core import RerankModelFamilyV2, TransformersRerankSpecV1
+from ...rerank_family import BUILTIN_RERANK_MODELS
 from ..core import SentenceTransformerRerankModel
 
 TEST_MODEL_SPEC = RerankModelFamilyV2(
@@ -21,6 +22,13 @@ TEST_MODEL_SPEC = RerankModelFamilyV2(
         )
     ],
 )
+
+
+def test_multimodal_model_abilities_are_exposed():
+    for model_name in ("Qwen3-VL-Reranker-2B", "Qwen3-VL-Reranker-8B"):
+        family = BUILTIN_RERANK_MODELS[model_name][0]
+        assert family.model_ability == ["vision", "video"]
+        assert family.to_description()["model_ability"] == ["rerank", "vision", "video"]
 
 
 async def test_model():

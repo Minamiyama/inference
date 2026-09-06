@@ -75,6 +75,10 @@ class RerankModelFamilyV2(BaseModel, ModelInstanceInfoMixin):
     model_name: str
     model_specs: List[RerankSpecV1]
     language: List[str]
+    # Extra accepted input modalities. Text is implicit for every rerank model.
+    model_ability: List[Literal["vision", "video", "audio"]] = Field(
+        default_factory=list
+    )
     type: Optional[str] = "unknown"
     max_tokens: Optional[int]
     cache_config: Optional[dict] = None
@@ -96,6 +100,7 @@ class RerankModelFamilyV2(BaseModel, ModelInstanceInfoMixin):
             "model_engine": getattr(self, "model_engine", None),
             "model_format": spec.model_format,
             "language": self.language,
+            "model_ability": ["rerank", *self.model_ability],
             "model_revision": spec.model_revision,
             "quantization": spec.quantization,
         }

@@ -94,6 +94,10 @@ class EmbeddingModelFamilyV2(BaseModel, ModelInstanceInfoMixin):
     dimensions: int
     max_tokens: int
     language: List[str]
+    # Extra accepted input modalities. Text is implicit for every embedding model.
+    model_ability: List[Literal["vision", "video", "audio"]] = Field(
+        default_factory=list
+    )
     model_specs: List["EmbeddingSpecV1"]
     cache_config: Optional[dict]
     virtualenv: Optional[VirtualEnvSettings]
@@ -115,6 +119,7 @@ class EmbeddingModelFamilyV2(BaseModel, ModelInstanceInfoMixin):
             "dimensions": self.dimensions,
             "max_tokens": self.max_tokens,
             "language": self.language,
+            "model_ability": ["embed", *self.model_ability],
             "model_hub": spec.model_hub,
             "model_revision": spec.model_revision,
             "quantization": spec.quantization,
