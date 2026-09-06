@@ -87,6 +87,10 @@ interface LaunchProgressResponse {
   replicas?: LaunchProgressReplica[];
 }
 
+interface SystemSettingsResponse {
+  download_source: string;
+}
+
 const DOWNLOAD_TERMINAL_STAGES = new Set(['completed', 'failed', 'cancelled']);
 
 const DOWNLOAD_ONLY_EXCLUDED_FIELDS = new Set([
@@ -416,6 +420,11 @@ export default function LaunchDialog({
       value: item,
     }));
   }, [model?.download_hubs, model?.modelSpecs, modelEngineValue]);
+  const downloadHubOptionsRef = useRef(downloadHubOptions);
+
+  useEffect(() => {
+    downloadHubOptionsRef.current = downloadHubOptions;
+  }, [downloadHubOptions]);
 
   const workerIpFieldProps = useMemo(
     () => ({
@@ -1846,6 +1855,34 @@ export default function LaunchDialog({
     if (latestConfig) {
       form.setFieldsValue(transformFetchToForm(latestConfig.data));
     }
+  }, [form, isOpen, model?.model_name]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let active = true;
+
+    const applyPreferredDownloadSource = async () => {
+      try {
+        const { download_source } = await request.get<SystemSettingsResponse>(
+          '/v1/cluster/system_settings'
+        );
+        if (
+          active &&
+          downloadHubOptionsRef.current.some((option) => option.value === download_source)
+        ) {
+          form.setFieldValue('download_hub', download_source);
+        }
+      } catch {
+        // Keep the current selection when settings are unavailable or unauthorized.
+      }
+    };
+
+    void applyPreferredDownloadSource();
+
+    return () => {
+      active = false;
+    };
   }, [form, isOpen, model?.model_name]);
 
   useEffect(() => {
