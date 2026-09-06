@@ -3038,14 +3038,16 @@ class WorkerActor(xo.StatelessActor):
     async def _get_model_ability(self, model: Any, model_type: str) -> List[str]:
         from ..model.llm.core import LLM
 
+        model_family = getattr(model, "model_family", None)
+        model_ability = getattr(model_family, "model_ability", None) or []
         ability_map = {
             "embedding": [
                 "embed",
-                *getattr(model.model_family, "model_ability", []),
+                *model_ability,
             ],
             "rerank": [
                 "rerank",
-                *getattr(model.model_family, "model_ability", []),
+                *model_ability,
             ],
             "flexible": ["flexible"],
         }

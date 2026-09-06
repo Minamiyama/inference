@@ -4348,3 +4348,15 @@ async def test_update_cache_status_skips_when_cache_tracker_ref_is_none():
         "sdxl",
         [{"model_file_location": "/tmp/sdxl"}],
     )
+
+
+@pytest.mark.asyncio
+async def test_get_model_ability_handles_missing_model_family_ability():
+    assert await WorkerActor._get_model_ability(None, SimpleNamespace(), "flexible") == [
+        "flexible"
+    ]
+    assert await WorkerActor._get_model_ability(
+        None,
+        SimpleNamespace(model_family=SimpleNamespace(model_ability=None)),
+        "embedding",
+    ) == ["embed"]
