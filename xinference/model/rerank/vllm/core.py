@@ -168,7 +168,11 @@ class VLLMRerankModel(RerankModel, BatchMixin):
                 self._to_score_multimodal_param(document) for document in documents
             ]
             score_kwargs["chat_template"] = self._qwen3_vl_reranker_template
-        outputs = self._model.score(query_list, documents, **score_kwargs)
+            outputs = []
+            for query, document in zip(query_list, documents):
+                outputs.extend(self._model.score(query, document, **score_kwargs))
+        else:
+            outputs = self._model.score(query_list, documents, **score_kwargs)
         # clear cache if possible
         self._counter += 1
         if self._counter % RERANK_EMPTY_CACHE_COUNT == 0:

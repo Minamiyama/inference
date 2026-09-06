@@ -2,7 +2,7 @@ import shutil
 import sys
 import types
 from types import SimpleNamespace
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 import pytest
 
@@ -61,38 +61,89 @@ def test_qwen3_vl_rerank_converts_multimodal_inputs():
     model._counter = 0
     model._qwen3_vl_reranker_template = "template"
 
-    model._rerank(
-        documents=[{"text": "document", "image": "https://example.com/image.jpg"}],
+    first_output, second_output = MagicMock(), MagicMock()
+    model._model.score.side_effect = [[first_output], [second_output]]
+
+    outputs = model._rerank(
+        documents=[
+            {"text": "document", "image": "https://example.com/image.jpg"},
+            {"video": "https://example.com/second-video.mp4"},
+        ],
         query={"video": "https://example.com/video.mp4"},
     )
 
-    assert model._model.score.call_args.args == (
-        [
+    query = {
+        "content": [
             {
-                "content": [
-                    {
-                        "type": "video_url",
-                        "video_url": {"url": "https://example.com/video.mp4"},
-                    }
-                ]
+                "type": "video_url",
+                "video_url": {"url": "https://example.com/video.mp4"},
             }
-        ],
-        [
-            {
-                "content": [
-                    {"type": "text", "text": "document"},
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": "https://example.com/image.jpg"},
-                    },
-                ]
-            }
-        ],
-    )
-    assert model._model.score.call_args.kwargs == {
-        "use_tqdm": False,
-        "chat_template": "template",
+        ]
     }
+    first_document = {
+        "content": [
+            {
+                "type": "text",
+                "text": "document",
+            },
+            {
+                "type": "image_url",
+                "image_url": {"url": "https://example.com/image.jpg"},
+            },
+        ]
+    }
+    second_document = {
+        "content": [
+            {
+                "type": "video_url",
+                "video_url": {"url": "https://example.com/second-video.mp4"},
+            }
+        ]
+    }
+    score_kwargs = {"use_tqdm": False, "chat_template": "template"}
+    assert model._model.score.call_args_list == [
+        call(query, first_document, **score_kwargs),
+        call(query, second_document, **score_kwargs),
+    ]
+    assert outputs == [first_output, second_output]
+
+
+@pytest.mark.skipif(VLLMRerankModel.check_lib() != True, reason="vllm not installed")
+def test_qwen3_vl_score_wrapper_is_unwrapped_by_vllm(monkeypatch):
+    from vllm import LLM
+
+    query = {
+        "content": [
+            {
+                "type": "text",
+                "text": "query",
+            }
+        ]
+    }
+    document = {
+        "content": [
+            {
+                "type": "image_url",
+                "image_url": {"url": "https://example.com/image.jpg"},
+            }
+        ]
+    }
+    llm = object.__new__(LLM)
+    llm.model_config = SimpleNamespace(
+        runner_type="pooling",
+        is_cross_encoder=True,
+        hf_config=SimpleNamespace(num_labels=1),
+        is_multimodal_model=True,
+    )
+    llm.get_tokenizer = MagicMock()
+
+    def cross_encoding_score(_, __, data_1, data_2, *args, **kwargs):
+        assert data_1 == query["content"]
+        assert data_2 == document["content"]
+        return []
+
+    monkeypatch.setattr(LLM, "_cross_encoding_score", cross_encoding_score)
+    assert LLM.score(llm, query, document, use_tqdm=False) == []
 
 
 @pytest.mark.skipif(VLLMRerankModel.check_lib() != True, reason="vllm not installed")
