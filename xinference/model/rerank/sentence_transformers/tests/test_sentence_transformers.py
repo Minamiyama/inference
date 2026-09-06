@@ -148,3 +148,41 @@ def test_jina_reranker_v35_batch_isolation():
     assert scores[2] == pytest.approx(0.9)  # C
     assert scores[3] == pytest.approx(0.8)  # D
     assert scores[4] == pytest.approx(0.7)  # E
+
+
+def test_qwen3_vl_batch_isolation():
+    model = SentenceTransformerRerankModel.__new__(SentenceTransformerRerankModel)
+    model._vl_reranker = MagicMock()
+    model._vl_reranker.process.side_effect = [[0.9, 0.8], [0.7]]
+
+    scores = model._rerank(
+        documents=["A", "B", "C"],
+        query=["Q1", "Q1", "Q2"],
+        top_n=None,
+        max_chunks_per_doc=None,
+        return_documents=True,
+        return_len=False,
+        _batch_offsets=[(0, 2), (2, 1)],
+    )
+
+    assert scores == [0.9, 0.8, 0.7]
+    assert model._vl_reranker.process.call_args_list == [
+        (
+            (
+                {
+                    "query": {"text": "Q1"},
+                    "documents": [{"text": "A"}, {"text": "B"}],
+                },
+            ),
+            {},
+        ),
+        (
+            (
+                {
+                    "query": {"text": "Q2"},
+                    "documents": [{"text": "C"}],
+                },
+            ),
+            {},
+        ),
+    ]

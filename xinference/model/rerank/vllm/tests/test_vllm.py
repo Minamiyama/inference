@@ -66,26 +66,15 @@ def test_qwen3_vl_rerank_converts_multimodal_inputs():
 
     outputs = model._rerank(
         documents=[
-            {"text": "document", "image": "https://example.com/image.jpg"},
+            {"image": "https://example.com/image.jpg"},
             {"video": "https://example.com/second-video.mp4"},
         ],
-        query={"video": "https://example.com/video.mp4"},
+        query="query",
     )
 
-    query = {
-        "content": [
-            {
-                "type": "video_url",
-                "video_url": {"url": "https://example.com/video.mp4"},
-            }
-        ]
-    }
+    query = "query"
     first_document = {
         "content": [
-            {
-                "type": "text",
-                "text": "document",
-            },
             {
                 "type": "image_url",
                 "image_url": {"url": "https://example.com/image.jpg"},
@@ -106,6 +95,26 @@ def test_qwen3_vl_rerank_converts_multimodal_inputs():
         call(query, second_document, **score_kwargs),
     ]
     assert outputs == [first_output, second_output]
+
+
+def test_qwen3_vl_rerank_rejects_unsupported_multimodal_pairs():
+    model = object.__new__(VLLMRerankModel)
+    model.model_family = SimpleNamespace(model_name="Qwen3-VL-Reranker-2B")
+    model._model = MagicMock()
+    model._counter = 0
+    model._qwen3_vl_reranker_template = "template"
+
+    with pytest.raises(ValueError, match="one content item"):
+        model._rerank(
+            documents=[{"text": "document", "image": "https://example.com/image.jpg"}],
+            query="query",
+        )
+
+    with pytest.raises(ValueError, match="media in both query and document"):
+        model._rerank(
+            documents=[{"image": "https://example.com/image.jpg"}],
+            query={"video": "https://example.com/video.mp4"},
+        )
 
 
 @pytest.mark.skipif(VLLMRerankModel.check_lib() != True, reason="vllm not installed")

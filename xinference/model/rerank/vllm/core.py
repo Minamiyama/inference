@@ -167,10 +167,23 @@ class VLLMRerankModel(RerankModel, BatchMixin):
             documents = [
                 self._to_score_multimodal_param(document) for document in documents
             ]
+            if len(query_list) != len(documents):
+                raise ValueError(
+                    "Qwen3-VL reranker query and documents must have equal length"
+                )
             score_kwargs["chat_template"] = self._qwen3_vl_reranker_template
             outputs = []
             for query, document in zip(query_list, documents):
-                outputs.extend(self._model.score(query, document, **score_kwargs))
+                if self._is_vllm_media(query) and self._is_vllm_media(document):
+                    raise ValueError(
+                        "Qwen3-VL reranker with vLLM does not support media in both query and document"
+                    )
+                pair_outputs = self._model.score(query, document, **score_kwargs)
+                if len(pair_outputs) != 1:
+                    raise RuntimeError(
+                        "Qwen3-VL reranker with vLLM must return one score per document"
+                    )
+                outputs.extend(pair_outputs)
         else:
             outputs = self._model.score(query_list, documents, **score_kwargs)
         # clear cache if possible
@@ -194,31 +207,42 @@ class VLLMRerankModel(RerankModel, BatchMixin):
             content = value["content"]
             if not isinstance(content, list):
                 raise ValueError("Qwen3-VL reranker content must be a list")
-            return {"content": content}
-
-        content = []
-        if "text" in value:
-            content.append({"type": "text", "text": value["text"]})
-        for input_key, content_type, content_key in (
-            ("image", "image_url", "image_url"),
-            ("image_url", "image_url", "image_url"),
-            ("video", "video_url", "video_url"),
-            ("video_url", "video_url", "video_url"),
-        ):
-            if input_key not in value:
-                continue
-            media = value[input_key]
-            content.append(
-                {
-                    "type": content_type,
-                    content_key: media if isinstance(media, dict) else {"url": media},
-                }
-            )
-        if not content:
+        else:
+            content = []
+            if "text" in value:
+                content.append({"type": "text", "text": value["text"]})
+            for input_key, content_type, content_key in (
+                ("image", "image_url", "image_url"),
+                ("image_url", "image_url", "image_url"),
+                ("video", "video_url", "video_url"),
+                ("video_url", "video_url", "video_url"),
+            ):
+                if input_key not in value:
+                    continue
+                media = value[input_key]
+                content.append(
+                    {
+                        "type": content_type,
+                        content_key: (
+                            media if isinstance(media, dict) else {"url": media}
+                        ),
+                    }
+                )
+        if len(content) != 1:
             raise ValueError(
-                "Qwen3-VL reranker inputs must contain text, image, or video content"
+                "Qwen3-VL reranker with vLLM supports one content item per input"
             )
+        if not isinstance(content[0], dict) or content[0].get("type") not in {
+            "text",
+            "image_url",
+            "video_url",
+        }:
+            raise ValueError("Qwen3-VL reranker content type is not supported by vLLM")
         return {"content": content}
+
+    @staticmethod
+    def _is_vllm_media(value: Any) -> bool:
+        return isinstance(value, dict) and value["content"][0]["type"] != "text"
 
     @extensible
     def rerank(

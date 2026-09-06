@@ -374,7 +374,9 @@ class SentenceTransformerRerankModel(RerankModel, BatchMixin):
         # branch uses this to preserve per-request isolation.
         batch_offsets = kwargs.pop("_batch_offsets", None)
         if self._vl_reranker is not None:
-            return self._rerank_vl(documents, query, **kwargs)
+            return self._rerank_vl(
+                documents, query, batch_offsets=batch_offsets, **kwargs
+            )
         assert self._model is not None
         if max_chunks_per_doc is not None:
             raise ValueError("rerank hasn't support `max_chunks_per_doc` parameter.")
@@ -541,29 +543,42 @@ class SentenceTransformerRerankModel(RerankModel, BatchMixin):
             return {"text": val}
         raise ValueError("Unsupported input type for Qwen3-VL reranker.")
 
-    def _rerank_vl(self, documents: List[Any], query: List[Any], **kwargs) -> List[Any]:
+    def _rerank_vl(
+        self,
+        documents: List[Any],
+        query: List[Any],
+        batch_offsets: Optional[List[Tuple[int, int]]] = None,
+        **kwargs,
+    ) -> List[Any]:
         if self._vl_reranker is None:
             raise RuntimeError("Qwen3-VL reranker is not initialized.")
 
         if len(query) == 0 or len(documents) == 0:
             return []
 
-        query_obj = self._normalize_vl_text(query[0])
-        doc_objs = [self._normalize_vl_text(doc) for doc in documents]
+        def process_request(
+            request_query: Any, request_documents: List[Any]
+        ) -> List[Any]:
+            payload: Dict[str, Any] = {
+                "query": self._normalize_vl_text(request_query),
+                "documents": [
+                    self._normalize_vl_text(document) for document in request_documents
+                ],
+            }
+            for key in ("instruction", "fps", "max_frames"):
+                if key in kwargs:
+                    payload[key] = kwargs[key]
+            return [float(score) for score in self._vl_reranker.process(payload)]
 
-        payload: Dict[str, Any] = {
-            "query": query_obj,
-            "documents": doc_objs,
-        }
-        if "instruction" in kwargs:
-            payload["instruction"] = kwargs.get("instruction")
-        if "fps" in kwargs:
-            payload["fps"] = kwargs.get("fps")
-        if "max_frames" in kwargs:
-            payload["max_frames"] = kwargs.get("max_frames")
+        if batch_offsets is None:
+            return process_request(query[0], documents)
 
-        scores = self._vl_reranker.process(payload)
-        return [float(score) for score in scores]
+        scores = []
+        for offset, size in batch_offsets:
+            scores.extend(
+                process_request(query[offset], documents[offset : offset + size])
+            )
+        return scores
 
     @extensible
     def rerank(
