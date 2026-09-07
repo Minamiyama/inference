@@ -60,6 +60,7 @@ import CommandLine from './command-line';
 import DownloadProgressDetails, { type DownloadProgressFile } from './download-progress-details';
 import ReplicaPlacementConfig from './replica-placement-config';
 import { FormField } from '@/components/ui/form-field';
+import { shouldApplyPreferredDownloadSource } from './download-source-utils.mjs';
 
 interface LaunchDialogProps {
   model?: CatalogModel;
@@ -421,6 +422,16 @@ export default function LaunchDialog({
     }));
   }, [model?.download_hubs, model?.modelSpecs, modelEngineValue]);
   const downloadHubOptionsRef = useRef(downloadHubOptions);
+  const downloadHubTouchedRef = useRef(false);
+  const downloadHubFieldProps = useMemo(
+    () => ({
+      options: downloadHubOptions,
+      onChange: () => {
+        downloadHubTouchedRef.current = true;
+      },
+    }),
+    [downloadHubOptions]
+  );
 
   useEffect(() => {
     downloadHubOptionsRef.current = downloadHubOptions;
@@ -689,7 +700,7 @@ export default function LaunchDialog({
         type: 'select',
         label: t('launchModel.downloadHub'),
         placeholder: t('launchModel.downloadHubPlaceholder'),
-        fieldProps: { options: downloadHubOptions },
+        fieldProps: downloadHubFieldProps,
       },
       {
         name: 'enable_thinking',
@@ -803,7 +814,7 @@ export default function LaunchDialog({
         type: 'select',
         label: t('launchModel.downloadHub'),
         placeholder: t('launchModel.downloadHubPlaceholder'),
-        fieldProps: { options: downloadHubOptions },
+        fieldProps: downloadHubFieldProps,
       },
       {
         name: 'request_limits',
@@ -909,7 +920,7 @@ export default function LaunchDialog({
         type: 'select',
         label: t('launchModel.downloadHub'),
         placeholder: t('launchModel.downloadHubPlaceholder'),
-        fieldProps: { options: downloadHubOptions },
+        fieldProps: downloadHubFieldProps,
       },
       {
         name: 'gguf_quantization',
@@ -1030,7 +1041,7 @@ export default function LaunchDialog({
         type: 'select',
         label: t('launchModel.downloadHub'),
         placeholder: t('launchModel.downloadHubPlaceholder'),
-        fieldProps: { options: downloadHubOptions },
+        fieldProps: downloadHubFieldProps,
       },
       {
         name: 'request_limits',
@@ -1158,7 +1169,7 @@ export default function LaunchDialog({
         type: 'select',
         label: t('launchModel.downloadHub'),
         placeholder: t('launchModel.downloadHubPlaceholder'),
-        fieldProps: { options: downloadHubOptions },
+        fieldProps: downloadHubFieldProps,
       },
       {
         name: 'request_limits',
@@ -1263,7 +1274,7 @@ export default function LaunchDialog({
         type: 'select',
         label: t('launchModel.downloadHub'),
         placeholder: t('launchModel.downloadHubPlaceholder'),
-        fieldProps: { options: downloadHubOptions },
+        fieldProps: downloadHubFieldProps,
       },
       {
         name: 'request_limits',
@@ -1370,7 +1381,7 @@ export default function LaunchDialog({
         type: 'select',
         label: t('launchModel.downloadHub'),
         placeholder: t('launchModel.downloadHubPlaceholder'),
-        fieldProps: { options: downloadHubOptions },
+        fieldProps: downloadHubFieldProps,
       },
       {
         name: 'request_limits',
@@ -1848,6 +1859,7 @@ export default function LaunchDialog({
   useEffect(() => {
     if (!isOpen) return;
 
+    downloadHubTouchedRef.current = false;
     const latestConfig = getLatestModelConfigHistory(model?.model_name);
 
     form.resetFields();
@@ -1869,7 +1881,11 @@ export default function LaunchDialog({
         );
         if (
           active &&
-          downloadHubOptionsRef.current.some((option) => option.value === download_source)
+          shouldApplyPreferredDownloadSource(
+            download_source,
+            downloadHubOptionsRef.current,
+            downloadHubTouchedRef.current
+          )
         ) {
           form.setFieldValue('download_hub', download_source);
         }
