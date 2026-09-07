@@ -125,7 +125,7 @@ export default function LaunchDialog({
   const [form] = useForm();
   const { t } = useI18n();
   const { clusterAuth } = useGlobal();
-  const { isAdmin } = useMenuAuth();
+  const { isAdmin, hasSettingsRead } = useMenuAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -1858,7 +1858,7 @@ export default function LaunchDialog({
   }, [form, isOpen, model?.model_name]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || (clusterAuth?.auth && !hasSettingsRead)) return;
 
     let active = true;
 
@@ -1883,7 +1883,7 @@ export default function LaunchDialog({
     return () => {
       active = false;
     };
-  }, [form, isOpen, model?.model_name]);
+  }, [clusterAuth?.auth, form, hasSettingsRead, isOpen, model?.model_name]);
 
   useEffect(() => {
     return () => {
