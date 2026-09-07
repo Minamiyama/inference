@@ -713,6 +713,7 @@ export function SpeechPanel({ form, model }: CapabilityFormProps) {
       : SPEECH_RESPONSE_FORMAT_OPTIONS;
   const supportsVoiceCloning = model.model_ability.includes(ModelAbility.Text2audioVoiceCloning);
   const supportsVoiceDesign = model.model_ability.includes(ModelAbility.Text2audioVoiceDesign);
+  const languageOptions = (model.model_lang ?? []).map((value) => ({ label: value, value }));
   const promptSpeech = useWatch('prompt_speech', form);
   const hasPromptSpeech =
     supportsVoiceCloning && Array.isArray(promptSpeech) && promptSpeech.length > 0;
@@ -746,6 +747,11 @@ export function SpeechPanel({ form, model }: CapabilityFormProps) {
           <FormField name="speed" label="Speed" normalize={normalizeNumberInput}>
             <Input type="number" min={0.5} max={2} step={0.1} />
           </FormField>
+          {languageOptions.length > 0 && (
+            <FormField name="language" label="Language">
+              <Select options={languageOptions} placeholder="Optional" />
+            </FormField>
+          )}
         </div>
       )}
       <div className="grid grid-cols-2 gap-3">

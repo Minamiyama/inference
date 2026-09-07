@@ -70,6 +70,46 @@ def _get_spec(model_name: str):
     return BUILTIN_AUDIO_MODELS[model_name][0]
 
 
+def test_tts_language_options_are_exposed_in_model_description():
+    qwen_languages = [
+        "auto",
+        "chinese",
+        "english",
+        "french",
+        "german",
+        "italian",
+        "japanese",
+        "korean",
+        "portuguese",
+        "russian",
+        "spanish",
+    ]
+
+    qwen_spec = _get_spec("Qwen3-TTS-12Hz-0.6B-Base")
+    assert qwen_spec.to_description()["model_lang"] == qwen_languages
+
+    custom_voice_spec = _get_spec("Qwen3-TTS-12Hz-0.6B-CustomVoice")
+    assert custom_voice_spec.to_description()["model_lang"] == qwen_languages + [
+        "beijing_dialect",
+        "sichuan_dialect",
+    ]
+
+    assert _get_spec("IndexTTS-2.5").to_description()["model_lang"] == [
+        "ZH",
+        "EN",
+        "JA",
+        "ES",
+        "AR",
+    ]
+
+    firered_languages = _get_spec("FireRedTTS3-Base").to_description()["model_lang"]
+    assert "Chinese" in firered_languages
+    assert "ZH_Sichuan" in firered_languages
+    assert "zh" not in firered_languages
+
+    assert _get_spec("CosyVoice2-0.5B").to_description()["model_lang"] == []
+
+
 def _register_all_engines():
     register_builtin_audio_engines()
     for model_specs in BUILTIN_AUDIO_MODELS.values():
