@@ -110,7 +110,17 @@ class MiniCPM5ToolParser(ToolParser):
                 text = text[:-length]
                 break
         position = 0
-        while match := cls._FUNCTION_OPEN_RE.search(text, position):
+        while True:
+            function_start = text.find(cls._FUNCTION_START, position)
+            if function_start == -1:
+                break
+            opening_end = text.find(">", function_start + len(cls._FUNCTION_START))
+            if opening_end == -1:
+                return text[:function_start]
+            match = cls._FUNCTION_OPEN_RE.match(text, function_start)
+            if match is None:
+                position = opening_end + 1
+                continue
             function_end = cls._find_closing_tag(text, "function", match.end())
             if function_end is None:
                 return text[: match.start()]
