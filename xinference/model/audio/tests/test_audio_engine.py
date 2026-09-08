@@ -13,7 +13,9 @@
 # limitations under the License.
 
 import json
+import sys
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -89,10 +91,7 @@ def test_tts_language_options_are_exposed_in_model_description():
     assert qwen_spec.to_description()["model_lang"] == qwen_languages
 
     custom_voice_spec = _get_spec("Qwen3-TTS-12Hz-0.6B-CustomVoice")
-    assert custom_voice_spec.to_description()["model_lang"] == qwen_languages + [
-        "beijing_dialect",
-        "sichuan_dialect",
-    ]
+    assert custom_voice_spec.to_description()["model_lang"] == qwen_languages
 
     assert _get_spec("IndexTTS-2.5").to_description()["model_lang"] == [
         "ZH",
@@ -108,6 +107,50 @@ def test_tts_language_options_are_exposed_in_model_description():
     assert "zh" not in firered_languages
 
     assert _get_spec("CosyVoice2-0.5B").to_description()["model_lang"] == []
+
+
+class _FakeQwen3TTSBackend:
+    def get_supported_languages(self):
+        return [
+            "auto",
+            "chinese",
+            "english",
+            "french",
+            "german",
+            "italian",
+            "japanese",
+            "korean",
+            "portuguese",
+            "russian",
+            "spanish",
+        ]
+
+    def generate_custom_voice(self, **kwargs):
+        raise RuntimeError("generation reached")
+
+
+@pytest.mark.parametrize(
+    "model_name",
+    [
+        "Qwen3-TTS-12Hz-0.6B-CustomVoice",
+        "Qwen3-TTS-12Hz-1.7B-CustomVoice",
+    ],
+)
+def test_qwen3_pytorch_custom_voice_languages_pass_backend_validation(
+    model_name, monkeypatch
+):
+    model_spec = next(
+        spec
+        for spec in BUILTIN_AUDIO_MODELS[model_name]
+        if spec.model_format == "pytorch"
+    )
+    model = PyTorchQwen3TTSAudioModel("uid", "/unused", model_spec)
+    model._model = _FakeQwen3TTSBackend()
+    monkeypatch.setitem(sys.modules, "soundfile", SimpleNamespace())
+
+    for language in model_spec.model_lang:
+        with pytest.raises(RuntimeError, match="generation reached"):
+            model.speech("test", voice="", language=language)
 
 
 def _register_all_engines():

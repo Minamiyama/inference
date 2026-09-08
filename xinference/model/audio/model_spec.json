@@ -2267,9 +2267,7 @@
       "korean",
       "portuguese",
       "russian",
-      "spanish",
-      "beijing_dialect",
-      "sichuan_dialect"
+      "spanish"
     ],
     "model_ability": [
       "text2audio"
@@ -2356,9 +2354,7 @@
       "korean",
       "portuguese",
       "russian",
-      "spanish",
-      "beijing_dialect",
-      "sichuan_dialect"
+      "spanish"
     ],
     "model_ability": [
       "text2audio"
