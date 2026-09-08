@@ -7,7 +7,7 @@ def test_extracts_minicpm5_xml_tool_calls():
     result = parser.extract_tool_calls(
         'Before <function name="weather"><param name="city">"Beijing"</param>'
         '<param name="days">3</param><param name="note"><![CDATA[a < b & c]]>'
-        '</param></function> after'
+        "</param></function> after"
     )
 
     assert result == [

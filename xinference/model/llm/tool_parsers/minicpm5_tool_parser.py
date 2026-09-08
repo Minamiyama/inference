@@ -47,7 +47,9 @@ class MiniCPM5ToolParser(ToolParser):
     def _parse_calls(
         cls, model_output: str
     ) -> List[Tuple[Optional[str], Optional[str], Optional[Dict[str, Any]]]]:
-        results = []
+        results: List[Tuple[Optional[str], Optional[str], Optional[Dict[str, Any]]]] = (
+            []
+        )
         position = 0
         for match in cls._FUNCTION_RE.finditer(model_output):
             if match.start() > position:
@@ -92,11 +94,9 @@ class MiniCPM5ToolParser(ToolParser):
         current_results = self._parse_calls(current)
         previous_call_count = sum(name is not None for _, name, _ in previous_results)
         previous_content_length = sum(
-            len(content or "")
-            for content, name, _ in previous_results
-            if name is None
+            len(content or "") for content, name, _ in previous_results if name is None
         )
-        events = []
+        events: List[Any] = []
         call_count = 0
         current_content_length = 0
         for content, name, arguments in current_results:

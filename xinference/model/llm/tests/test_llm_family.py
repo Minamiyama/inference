@@ -929,9 +929,7 @@ def test_minicpm5_2b_builtin_family_has_all_published_formats():
     from ..llm_family import BUILTIN_LLM_FAMILIES
 
     family = next(
-        family
-        for family in BUILTIN_LLM_FAMILIES
-        if family.model_name == "minicpm5-2b"
+        family for family in BUILTIN_LLM_FAMILIES if family.model_name == "minicpm5-2b"
     )
     specs = {
         spec.model_format: {
