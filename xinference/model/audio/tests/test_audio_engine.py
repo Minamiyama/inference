@@ -125,6 +125,9 @@ class _FakeQwen3TTSBackend:
             "spanish",
         ]
 
+    def get_supported_speakers(self):
+        return []
+
     def generate_custom_voice(self, **kwargs):
         raise RuntimeError("generation reached")
 
