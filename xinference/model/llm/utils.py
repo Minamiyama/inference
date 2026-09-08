@@ -212,6 +212,7 @@ LLAMA3_TOOL_CALL_FAMILY: Set[str] = set()
 QWEN_TOOL_CALL_FAMILY: Set[str] = set()
 GLM5_TOOL_CALL_FAMILY: Set[str] = set()
 KIMI_K3_TOOL_CALL_FAMILY: Set[str] = set()
+MINICPM5_TOOL_CALL_FAMILY: Set[str] = set()
 
 QWEN_TOOL_CALL_SYMBOLS = ["<tool_call>", "</tool_call>"]
 
