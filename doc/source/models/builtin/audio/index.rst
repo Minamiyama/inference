@@ -11,6 +11,10 @@ The following is a list of built-in audio models in Xinference:
    :maxdepth: 1
 
    ace-step1.5
+
+   auk
+
+   auk-flash
   
    belle-whisper-large-v3-zh
   
