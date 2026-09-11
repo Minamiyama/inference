@@ -160,7 +160,9 @@ def test_speech_without_prompt_uses_instruction_tts(model_spec, monkeypatch):
             ],
         }
     ]
-    assert captured["kwargs"]["gen_seconds"] == _estimate_gen_seconds("你好，AuK。", 1.0)
+    assert captured["kwargs"]["gen_seconds"] == _estimate_gen_seconds(
+        "你好，AuK。", 1.0
+    )
 
 
 @pytest.mark.parametrize("speed", [0, -1, "bad"])
