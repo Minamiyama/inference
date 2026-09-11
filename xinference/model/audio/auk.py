@@ -208,8 +208,8 @@ class AukModel:
                 with tempfile.NamedTemporaryFile(
                     prefix="auk_ref_", suffix=".wav", delete=False
                 ) as prompt_file:
-                    prompt_file.write(prompt_speech)
                     prompt_path = prompt_file.name
+                    prompt_file.write(prompt_speech)
                 content.append({"type": "audio", "audio": prompt_path})
 
             messages = [{"role": "user", "content": content}]
