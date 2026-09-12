@@ -855,7 +855,7 @@ class VirtualEnvManager:
         packages = []
         for site_packages_path in self._get_site_packages_paths(environment_path):
             for distribution in metadata.distributions(path=[str(site_packages_path)]):
-                name = distribution.metadata.get("Name")
+                name = distribution.metadata["Name"]
                 if not name:
                     continue
                 packages.append(
