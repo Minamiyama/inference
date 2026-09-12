@@ -21,7 +21,7 @@ import pytest
 from .. import _install
 from .. import irodori_tts as irodori_tts_module
 from .. import load_model_family_from_json
-from ..core import create_audio_model_instance
+from ..core import create_audio_model_instance, match_audio
 from ..irodori_tts import IrodoriTTSModel
 
 def _model_spec(model_file_name="model.safetensors"):
@@ -60,7 +60,7 @@ class _FakeRuntime:
         return SimpleNamespace(sample_rate=48000, audio="audio")
 
 
-def test_irodori_catalog_registers_full_models():
+def test_irodori_catalog_registers_quantization_variants():
     models = {}
     load_model_family_from_json("model_spec.json", models)
 
@@ -70,8 +70,26 @@ def test_irodori_catalog_registers_full_models():
     }
     assert expected_model_names <= models.keys()
 
+    expected_quantizations = {
+        "none",
+        "INT8-Weight-Only",
+        "INT8-Dynamic",
+        "INT4-Weight-Only",
+        "Float8-Weight-Only",
+        "Float8-Dynamic",
+    }
+    expected_model_ids = {
+        "Irodori-TTS-v4.1-Small": "Aratako/Irodori-TTS-v4.1-Small",
+        "Irodori-TTS-v4.1-Anime": "phasefield-audio/Irodori-TTS-v4.1-Anime",
+    }
+    expected_quantized_model_ids = {
+        "Irodori-TTS-v4.1-Small": "Aratako/Irodori-TTS-v4.1-Small-Quantized",
+        "Irodori-TTS-v4.1-Anime": "phasefield-audio/Irodori-TTS-v4.1-Anime",
+    }
+
     for model_name in expected_model_names:
         specs = models[model_name]
+        assert {spec.quantization for spec in specs} == expected_quantizations
         assert {spec.model_hub for spec in specs} == {"huggingface", "modelscope"}
         assert {spec.model_revision for spec in specs} == {"main", "master"}
         assert {spec.model_family for spec in specs} == {"Irodori-TTS"}
@@ -103,17 +121,31 @@ def test_irodori_catalog_registers_full_models():
             for spec in specs
         )
         assert all("#system_torchcodec#" in spec.virtualenv.packages for spec in specs)
-        assert all(
-            "torchao>=0.16,<0.17" not in spec.virtualenv.packages
-            for spec in specs
-        )
+        for quantization in expected_quantizations:
+            quantized_specs = [
+                spec for spec in specs if spec.quantization == quantization
+            ]
+            assert {spec.model_hub for spec in quantized_specs} == {
+                "huggingface",
+                "modelscope",
+            }
+            if quantization == "none":
+                assert all(
+                    spec.model_id == expected_model_ids[model_name]
+                    and spec.model_file_name == "model.safetensors"
+                    and "torchao>=0.16,<0.17" not in spec.virtualenv.packages
+                    for spec in quantized_specs
+                )
+            else:
+                assert all(
+                    spec.model_id == expected_quantized_model_ids[model_name]
+                    and spec.model_file_name
+                    == f"{quantization.lower()}/model.safetensors"
+                    and "torchao>=0.16,<0.17" in spec.virtualenv.packages
+                    for spec in quantized_specs
+                )
 
-    for spec in models["Irodori-TTS-v4.1-Small"]:
-        assert spec.model_id == "Aratako/Irodori-TTS-v4.1-Small"
-        assert spec.model_file_name == "model.safetensors"
-    for spec in models["Irodori-TTS-v4.1-Anime"]:
-        assert spec.model_id == "phasefield-audio/Irodori-TTS-v4.1-Anime"
-        assert spec.model_file_name == "model.safetensors"
+
 def test_irodori_uses_vendored_source(monkeypatch):
     vendor_root = Path(irodori_tts_module._IRODORI_VENDOR_ROOT)
     dacvae_vendor_root = Path(irodori_tts_module._DACVAE_VENDOR_ROOT)
@@ -268,10 +300,17 @@ def test_audio_factory_creates_irodori_model():
 
     model = create_audio_model_instance(
         "irodori",
-        "Irodori-TTS-v4.1-Anime-INT4-Weight-Only",
+        "Irodori-TTS-v4.1-Anime",
         model_path="/fake/path",
         enable_virtual_env=False,
+        quantization="INT4-Weight-Only",
     )
 
     assert isinstance(model, IrodoriTTSModel)
     assert model.model_family.model_file_name == "int4-weight-only/model.safetensors"
+    assert (
+        match_audio("Irodori-TTS-v4.1-Anime").model_file_name
+        == "model.safetensors"
+    )
+    with pytest.raises(ValueError, match="does not support quantization"):
+        match_audio("Irodori-TTS-v4.1-Anime", quantization="invalid")

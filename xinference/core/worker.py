@@ -2704,6 +2704,7 @@ class WorkerActor(xo.StatelessActor):
                             {
                                 "model_format": family.model_format or "pytorch",
                                 "model_engine": family.engine,
+                                "quantization": family.quantization or "none",
                                 "model_hub": family.model_hub,
                                 "model_id": family.model_id,
                                 "cache_name": family.cache_name,
@@ -4903,7 +4904,12 @@ class WorkerActor(xo.StatelessActor):
         elif model_type == "audio":
             from ..model.audio.core import match_audio
 
-            spec = match_audio(model_name, download_hub, model_engine=model_engine)
+            spec = match_audio(
+                model_name,
+                download_hub,
+                model_engine=model_engine,
+                quantization=quantization,
+            )
         elif model_type == "video":
             from ..model.video.core import match_diffusion as match_video
             from ..model.video.core import resolve_video_model_name_and_engine
