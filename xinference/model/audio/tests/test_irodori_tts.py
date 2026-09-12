@@ -24,15 +24,6 @@ from .. import load_model_family_from_json
 from ..core import create_audio_model_instance
 from ..irodori_tts import IrodoriTTSModel
 
-_QUANTIZATIONS = (
-    "INT8-Weight-Only",
-    "INT8-Dynamic",
-    "INT4-Weight-Only",
-    "Float8-Weight-Only",
-    "Float8-Dynamic",
-)
-
-
 def _model_spec(model_file_name="model.safetensors"):
     return SimpleNamespace(
         model_name="Irodori-TTS-v4.1-Small",
@@ -69,19 +60,16 @@ class _FakeRuntime:
         return SimpleNamespace(sample_rate=48000, audio="audio")
 
 
-def test_irodori_catalog_registers_sources_and_quantized_variants():
+def test_irodori_catalog_registers_full_models():
     models = {}
     load_model_family_from_json("model_spec.json", models)
 
     expected_model_names = {
         "Irodori-TTS-v4.1-Small",
         "Irodori-TTS-v4.1-Anime",
-        *{f"Irodori-TTS-v4.1-Small-{quantization}" for quantization in _QUANTIZATIONS},
-        *{f"Irodori-TTS-v4.1-Anime-{quantization}" for quantization in _QUANTIZATIONS},
     }
     assert expected_model_names <= models.keys()
 
-    small_quantized_source = "Aratako/Irodori-TTS-v4.1-Small-Quantized"
     for model_name in expected_model_names:
         specs = models[model_name]
         assert {spec.model_hub for spec in specs} == {"huggingface", "modelscope"}
@@ -115,15 +103,9 @@ def test_irodori_catalog_registers_sources_and_quantized_variants():
             for spec in specs
         )
         assert all("#system_torchcodec#" in spec.virtualenv.packages for spec in specs)
-        has_torchao = all(
-            "torchao>=0.16,<0.17" in spec.virtualenv.packages for spec in specs
-        )
-        assert has_torchao == (
-            model_name
-            not in {
-                "Irodori-TTS-v4.1-Small",
-                "Irodori-TTS-v4.1-Anime",
-            }
+        assert all(
+            "torchao>=0.16,<0.17" not in spec.virtualenv.packages
+            for spec in specs
         )
 
     for spec in models["Irodori-TTS-v4.1-Small"]:
@@ -132,22 +114,6 @@ def test_irodori_catalog_registers_sources_and_quantized_variants():
     for spec in models["Irodori-TTS-v4.1-Anime"]:
         assert spec.model_id == "phasefield-audio/Irodori-TTS-v4.1-Anime"
         assert spec.model_file_name == "model.safetensors"
-    for model_name in expected_model_names - {
-        "Irodori-TTS-v4.1-Small",
-        "Irodori-TTS-v4.1-Anime",
-    }:
-        for spec in models[model_name]:
-            if "Small-" in model_name:
-                assert spec.model_id == small_quantized_source
-            else:
-                assert spec.model_id == "phasefield-audio/Irodori-TTS-v4.1-Anime"
-            assert spec.model_file_name.endswith("/model.safetensors")
-            assert spec.cache_config["allow_patterns"] == [
-                spec.model_file_name,
-                "tokenizer/*",
-            ]
-
-
 def test_irodori_uses_vendored_source(monkeypatch):
     vendor_root = Path(irodori_tts_module._IRODORI_VENDOR_ROOT)
     dacvae_vendor_root = Path(irodori_tts_module._DACVAE_VENDOR_ROOT)
