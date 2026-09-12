@@ -61,6 +61,12 @@ class _FakeRuntime:
 
 
 def test_irodori_catalog_registers_quantization_variants():
+    torchao_x86_64_package = 'torchao>=0.16,<0.17 ; platform_machine == "x86_64"'
+    torchao_aarch64_package = (
+        "torchao @ https://files.pythonhosted.org/packages/d0/3d/"
+        "0c5a5833a135a045510e06c06b3d4cf316b06d59415bc21e0b021a000cc8/"
+        'torchao-0.16.0-py3-none-any.whl ; platform_machine == "aarch64"'
+    )
     models = {}
     load_model_family_from_json("model_spec.json", models)
 
@@ -133,7 +139,8 @@ def test_irodori_catalog_registers_quantization_variants():
                 assert all(
                     spec.model_id == expected_model_ids[model_name]
                     and spec.model_file_name == "model.safetensors"
-                    and "torchao>=0.16,<0.17" not in spec.virtualenv.packages
+                    and torchao_x86_64_package not in spec.virtualenv.packages
+                    and torchao_aarch64_package not in spec.virtualenv.packages
                     for spec in quantized_specs
                 )
             else:
@@ -141,7 +148,8 @@ def test_irodori_catalog_registers_quantization_variants():
                     spec.model_id == expected_quantized_model_ids[model_name]
                     and spec.model_file_name
                     == f"{quantization.lower()}/model.safetensors"
-                    and "torchao>=0.16,<0.17" in spec.virtualenv.packages
+                    and torchao_x86_64_package in spec.virtualenv.packages
+                    and torchao_aarch64_package in spec.virtualenv.packages
                     for spec in quantized_specs
                 )
 
