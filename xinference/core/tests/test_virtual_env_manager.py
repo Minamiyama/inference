@@ -1462,6 +1462,24 @@ def test_list_virtual_env_packages_returns_direct_distribution_sizes(
     ]
 
 
+def test_get_distribution_size_skips_invalid_or_outside_files(tmp_path):
+    environment_path = tmp_path / "virtualenv"
+    package_file = environment_path / "package.py"
+    outside_file = tmp_path / "outside.py"
+    environment_path.mkdir()
+    package_file.write_text("package = True\n")
+    outside_file.write_text("outside = True\n")
+
+    distribution = mock.Mock()
+    distribution.files = ["package.py", "outside.py", "invalid.py"]
+    distribution.locate_file.side_effect = [package_file, outside_file, None]
+
+    assert (
+        VirtualEnvManager._get_distribution_size(distribution, environment_path)
+        == package_file.stat().st_size
+    )
+
+
 def test_list_virtual_env_packages_requires_exact_environment(tmp_path, monkeypatch):
     from xinference.core import virtual_env_manager
 

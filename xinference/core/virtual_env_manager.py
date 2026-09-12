@@ -17,6 +17,7 @@ import logging
 import os
 import re
 import shutil
+import stat
 import subprocess
 from importlib import metadata
 from pathlib import Path
@@ -892,14 +893,17 @@ class VirtualEnvManager:
     @staticmethod
     def _get_distribution_size(distribution: Any, environment_path: Path) -> int:
         total_size = 0
-        resolved_environment_path = environment_path.resolve()
+        normalized_environment_path = Path(os.path.abspath(environment_path))
         for package_file in distribution.files or []:
             try:
-                file_path = Path(distribution.locate_file(package_file)).resolve()
-                file_path.relative_to(resolved_environment_path)
-                if file_path.is_file():
-                    total_size += file_path.stat().st_size
-            except (OSError, ValueError):
+                file_path = Path(
+                    os.path.abspath(distribution.locate_file(package_file))
+                )
+                file_path.relative_to(normalized_environment_path)
+                file_stat = file_path.lstat()
+                if stat.S_ISREG(file_stat.st_mode):
+                    total_size += file_stat.st_size
+            except (OSError, TypeError, ValueError):
                 continue
         return total_size
 
