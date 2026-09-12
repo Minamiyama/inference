@@ -106,6 +106,7 @@ from .utils import (
     filter_virtualenv_packages_by_markers,
     find_direct_reference_packages,
     find_remote_direct_reference_packages,
+    get_path_size,
     log_async,
     log_sync,
     merge_virtual_env_packages,
@@ -5772,6 +5773,18 @@ class WorkerActor(xo.StatelessActor):
                 cached_model["real_path"] = real_path
             cached_model["actor_ip_address"] = self.address
             cached_models.append(cached_model)
+        sizes = await asyncio.gather(
+            *[
+                asyncio.to_thread(
+                    get_path_size,
+                    cached_model["path"],
+                    follow_file_symlinks=True,
+                )
+                for cached_model in cached_models
+            ]
+        )
+        for cached_model, size in zip(cached_models, sizes):
+            cached_model["size_bytes"] = size
         return cached_models
 
     @staticmethod
@@ -6194,6 +6207,15 @@ class WorkerActor(xo.StatelessActor):
                     "actor_ip_address": self.address,
                 }
                 virtual_envs.append(virtual_env)
+
+            sizes = await asyncio.gather(
+                *[
+                    asyncio.to_thread(get_path_size, virtual_env["path"])
+                    for virtual_env in virtual_envs
+                ]
+            )
+            for virtual_env, size in zip(virtual_envs, sizes):
+                virtual_env["size_bytes"] = size
 
             return virtual_envs
         except Exception as e:
