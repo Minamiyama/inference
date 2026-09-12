@@ -24,6 +24,7 @@ from .. import load_model_family_from_json
 from ..core import create_audio_model_instance, match_audio
 from ..irodori_tts import IrodoriTTSModel
 
+
 def _model_spec(model_file_name="model.safetensors"):
     return SimpleNamespace(
         model_name="Irodori-TTS-v4.1-Small",
@@ -120,8 +121,7 @@ def test_irodori_catalog_registers_quantization_variants():
         )
         assert all(
             not any(
-                package.startswith("dacvae @")
-                or package.startswith("silentcipher")
+                package.startswith("dacvae @") or package.startswith("silentcipher")
                 for package in spec.virtualenv.packages
             )
             for spec in specs
@@ -316,9 +316,6 @@ def test_audio_factory_creates_irodori_model():
 
     assert isinstance(model, IrodoriTTSModel)
     assert model.model_family.model_file_name == "int4-weight-only/model.safetensors"
-    assert (
-        match_audio("Irodori-TTS-v4.1-Anime").model_file_name
-        == "model.safetensors"
-    )
+    assert match_audio("Irodori-TTS-v4.1-Anime").model_file_name == "model.safetensors"
     with pytest.raises(ValueError, match="does not support quantization"):
         match_audio("Irodori-TTS-v4.1-Anime", quantization="invalid")
