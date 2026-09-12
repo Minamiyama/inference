@@ -18,6 +18,7 @@ import os
 import re
 import shutil
 import subprocess
+from importlib import metadata
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
@@ -830,23 +831,79 @@ class VirtualEnvManager:
         virtual_envs = self.list_virtual_envs(model_name)
         return {"has_virtual_env": len(virtual_envs) > 0, "model_name": model_name}
 
-    def list_virtual_env_packages(self, model_name: str) -> Dict[str, Any]:
-        """
-        List packages installed in a specific virtual environment.
+    def list_virtual_env_packages(
+        self, model_name: str, model_engine: str, python_version: str
+    ) -> Dict[str, Any]:
+        """List distributions installed directly in one virtual environment."""
+        if not model_name or not model_engine or not python_version:
+            raise ValueError(
+                "model_name, model_engine and python_version are required"
+            )
 
-        Args:
-            model_name: Name of the model
+        environments = [
+            environment
+            for environment in self.list_virtual_envs(model_name, model_engine)
+            if environment["python_version"] == python_version
+        ]
+        if len(environments) != 1:
+            raise ValueError(
+                "Virtual environment not found for "
+                f"model={model_name}, engine={model_engine}, python={python_version}"
+            )
 
-        Returns:
-            Dictionary with package information or error message
-        """
-        # This method is deprecated and no longer needed
-        # Virtual environments are managed by direct directory scanning
+        environment = environments[0]
+        environment_path = Path(environment["path"])
+        packages = []
+        for site_packages_path in self._get_site_packages_paths(environment_path):
+            for distribution in metadata.distributions(path=[str(site_packages_path)]):
+                name = distribution.metadata.get("Name")
+                if not name:
+                    continue
+                packages.append(
+                    {
+                        "name": name,
+                        "version": distribution.version,
+                        "size_bytes": self._get_distribution_size(
+                            distribution, environment_path
+                        ),
+                    }
+                )
+
         return {
             "model_name": model_name,
+            "model_engine": model_engine,
+            "python_version": python_version,
             "worker_ip": self.worker_address,
-            "error": "Package listing functionality has been removed",
+            "packages": sorted(packages, key=lambda package: package["name"].lower()),
         }
+
+    @staticmethod
+    def _get_site_packages_paths(environment_path: Path) -> List[Path]:
+        site_packages_paths = []
+        windows_site_packages = environment_path / "Lib" / "site-packages"
+        if windows_site_packages.is_dir():
+            site_packages_paths.append(windows_site_packages)
+
+        lib_path = environment_path / "lib"
+        if lib_path.is_dir():
+            site_packages_paths.extend(
+                path for path in lib_path.glob("python*/site-packages") if path.is_dir()
+            )
+        return site_packages_paths
+
+    @staticmethod
+    def _get_distribution_size(distribution: Any, environment_path: Path) -> int:
+        total_size = 0
+        resolved_environment_path = environment_path.resolve()
+        for package_file in distribution.files or []:
+            try:
+                file_path = Path(distribution.locate_file(package_file)).resolve()
+                file_path.relative_to(resolved_environment_path)
+                if file_path.is_file():
+                    total_size += file_path.stat().st_size
+            except (OSError, ValueError):
+                continue
+        return total_size
 
     def _detect_python_version(self, env_path: str) -> str:
         """

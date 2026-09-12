@@ -62,6 +62,7 @@ def mock_supervisor():
     supervisor.list_deletable_models = AsyncMock(return_value=[])
     supervisor.confirm_and_remove_model = AsyncMock(return_value=True)
     supervisor.list_virtual_envs = AsyncMock(return_value=[])
+    supervisor.list_virtual_env_packages = AsyncMock(return_value={"packages": []})
     supervisor.remove_virtual_env = AsyncMock(return_value=True)
     supervisor.get_progress = AsyncMock(return_value=0.5)
     return supervisor
@@ -377,6 +378,49 @@ async def test_list_virtual_envs_returns_list(mock_api, mock_supervisor):
     )
     assert response.status_code == 200
     assert _json_body(response) == {"list": [{"name": "venv1"}]}
+
+
+@pytest.mark.asyncio
+async def test_list_virtual_env_packages_forwards_exact_environment(
+    mock_api, mock_supervisor
+):
+    mock_supervisor.list_virtual_env_packages.return_value = {
+        "packages": [{"name": "vllm", "version": "0.11.2", "size_bytes": 1024}]
+    }
+
+    response = await admin.list_virtual_env_packages(
+        api=mock_api,
+        model_name="Qwen3",
+        model_engine="vllm",
+        python_version="3.12",
+        worker_ip="10.0.0.1",
+    )
+
+    assert response.status_code == 200
+    assert _json_body(response)["packages"][0]["name"] == "vllm"
+    mock_supervisor.list_virtual_env_packages.assert_awaited_once_with(
+        "Qwen3", "vllm", "3.12", "10.0.0.1"
+    )
+
+
+@pytest.mark.asyncio
+async def test_list_virtual_env_packages_returns_404_for_missing_environment(
+    mock_api, mock_supervisor
+):
+    mock_supervisor.list_virtual_env_packages.side_effect = ValueError(
+        "Virtual environment not found"
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        await admin.list_virtual_env_packages(
+            api=mock_api,
+            model_name="Qwen3",
+            model_engine="vllm",
+            python_version="3.12",
+            worker_ip="10.0.0.1",
+        )
+
+    assert exc_info.value.status_code == 404
 
 
 @pytest.mark.asyncio

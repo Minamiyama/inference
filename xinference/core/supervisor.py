@@ -5889,43 +5889,20 @@ class SupervisorActor(xo.StatelessActor):
         return sorted(virtual_envs, key=lambda x: x["model_name"])
 
     async def list_virtual_env_packages(
-        self, model_name: str, worker_ip: Optional[str] = None
+        self,
+        model_name: str,
+        model_engine: str,
+        python_version: str,
+        worker_ip: str,
     ) -> Dict[str, Any]:
-        """List packages in a virtual environment across the cluster."""
-        if not model_name:
-            raise ValueError("model_name is required")
-
-        target_ip_worker_ref = (
-            self._get_worker_ref_by_ip(worker_ip) if worker_ip is not None else None
-        )
-        if (
-            worker_ip is not None
-            and not self.is_local_deployment()
-            and target_ip_worker_ref is None
-        ):
+        """List packages installed directly in one worker virtual environment."""
+        target_ip_worker_ref = self._get_worker_ref_by_ip(worker_ip)
+        if target_ip_worker_ref is None:
             raise ValueError(f"Worker ip address {worker_ip} is not in the cluster.")
 
-        # If specific worker is requested, query only that worker
-        if target_ip_worker_ref:
-            return await target_ip_worker_ref.list_virtual_env_packages(model_name)
-
-        # Otherwise, try all workers until we find the virtual environment
-        for worker in self._worker_address_to_worker.values():
-            try:
-                package_info = await worker.list_virtual_env_packages(model_name)
-                if "error" not in package_info:
-                    return package_info
-            except Exception as e:
-                logger.debug(
-                    f"Worker doesn't have virtual environment for {model_name}: {e}"
-                )
-
-        # If no worker has the virtual environment
-        return {
-            "model_name": model_name,
-            "worker_ip": None,
-            "error": f"Virtual environment for model {model_name} not found on any worker",
-        }
+        return await target_ip_worker_ref.list_virtual_env_packages(
+            model_name, model_engine, python_version
+        )
 
     async def remove_virtual_env(
         self,

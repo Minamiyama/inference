@@ -431,6 +431,26 @@ async def list_virtual_envs(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+async def list_virtual_env_packages(
+    api: "RESTfulAPI" = Depends(get_api),
+    model_name: str = Query(...),
+    model_engine: str = Query(...),
+    python_version: str = Query(...),
+    worker_ip: str = Query(...),
+) -> JSONResponse:
+    try:
+        supervisor_ref = await api._get_supervisor_ref()
+        data = await supervisor_ref.list_virtual_env_packages(
+            model_name, model_engine, python_version, worker_ip
+        )
+        return JSONResponse(content=data)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 async def remove_virtual_env(
     api: "RESTfulAPI" = Depends(get_api),
     model_name: str = Query(None),
@@ -1779,6 +1799,14 @@ def register_routes(api: "RESTfulAPI") -> None:
         dependencies=([Security(auth, scopes=["cache:delete"])] if is_auth else None),
     )
 
+    router.add_api_route(
+        "/v1/virtualenvs/packages",
+        list_virtual_env_packages,
+        methods=["GET"],
+        dependencies=(
+            [Security(auth, scopes=["virtualenv:list"])] if is_auth else None
+        ),
+    )
     router.add_api_route(
         "/v1/virtualenvs",
         list_virtual_envs,

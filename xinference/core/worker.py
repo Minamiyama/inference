@@ -6200,9 +6200,16 @@ class WorkerActor(xo.StatelessActor):
             logger.error(f"Error in list_virtual_envs: {e}")
             raise
 
-    async def list_virtual_env_packages(self, model_name: str) -> Dict[str, Any]:
-        """List packages installed in a specific virtual environment."""
-        return self._virtual_env_manager.list_virtual_env_packages(model_name)
+    async def list_virtual_env_packages(
+        self, model_name: str, model_engine: str, python_version: str
+    ) -> Dict[str, Any]:
+        """List packages installed directly in one virtual environment."""
+        return await asyncio.to_thread(
+            self._virtual_env_manager.list_virtual_env_packages,
+            model_name,
+            model_engine,
+            python_version,
+        )
 
     async def remove_virtual_env(
         self,

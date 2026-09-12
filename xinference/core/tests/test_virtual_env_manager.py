@@ -1414,3 +1414,55 @@ def test_remove_virtual_env_allows_delete_after_final_release(tmp_path, monkeypa
         active_model_uids_by_path={},
     )
     assert not env_path.exists()
+
+
+def test_list_virtual_env_packages_returns_direct_distribution_sizes(tmp_path, monkeypatch):
+    from xinference.core import virtual_env_manager
+
+    virtual_env_root = tmp_path / "virtualenv"
+    environment_path = virtual_env_root / "v4" / "Qwen3" / "vllm" / "3.12"
+    site_packages_path = environment_path / "lib" / "python3.12" / "site-packages"
+    package_file = site_packages_path / "demo_package" / "__init__.py"
+    metadata_file = site_packages_path / "demo_package-1.2.3.dist-info" / "METADATA"
+    record_file = site_packages_path / "demo_package-1.2.3.dist-info" / "RECORD"
+
+    package_file.parent.mkdir(parents=True)
+    metadata_file.parent.mkdir()
+    package_file.write_text("value = 1\n")
+    metadata_file.write_text("Metadata-Version: 2.1\nName: demo-package\nVersion: 1.2.3\n")
+    record_file.write_text(
+        "demo_package/__init__.py,,\n"
+        "demo_package-1.2.3.dist-info/METADATA,,\n"
+        "demo_package-1.2.3.dist-info/RECORD,,\n"
+    )
+    (site_packages_path / "not-in-record.py").write_text("ignored = True\n")
+    monkeypatch.setattr(
+        virtual_env_manager, "XINFERENCE_VIRTUAL_ENV_DIR", str(virtual_env_root)
+    )
+
+    result = VirtualEnvManager("worker-0").list_virtual_env_packages(
+        "Qwen3", "vllm", "3.12"
+    )
+
+    assert result["model_name"] == "Qwen3"
+    assert result["worker_ip"] == "worker-0"
+    assert result["packages"] == [
+        {
+            "name": "demo-package",
+            "version": "1.2.3",
+            "size_bytes": sum(
+                path.stat().st_size for path in (package_file, metadata_file, record_file)
+            ),
+        }
+    ]
+
+
+def test_list_virtual_env_packages_requires_exact_environment(tmp_path, monkeypatch):
+    from xinference.core import virtual_env_manager
+
+    monkeypatch.setattr(
+        virtual_env_manager, "XINFERENCE_VIRTUAL_ENV_DIR", str(tmp_path / "virtualenv")
+    )
+
+    with pytest.raises(ValueError, match="Virtual environment not found"):
+        VirtualEnvManager("worker-0").list_virtual_env_packages("Qwen3", "vllm", "3.12")

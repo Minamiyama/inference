@@ -85,6 +85,12 @@ export interface ModelEnvItem {
   actor_ip_address: string;
 }
 
+export interface VirtualEnvPackage {
+  name: string;
+  version: string;
+  size_bytes: number;
+}
+
 export interface DownloadProgressFile {
   name: string;
   downloaded_bytes: number;
