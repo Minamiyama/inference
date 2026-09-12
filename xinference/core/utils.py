@@ -72,8 +72,13 @@ def get_path_size(path: str, follow_file_symlinks: bool = False) -> int:
     model caches, whose payload files commonly link to Hub-managed blobs.
     """
 
-    if not path or os.path.islink(path):
+    if not path:
         return 0
+    if os.path.islink(path):
+        if os.path.isdir(path) or (follow_file_symlinks and os.path.isfile(path)):
+            path = os.path.realpath(path)
+        else:
+            return 0
 
     seen_inodes: Set[Tuple[int, int]] = set()
 

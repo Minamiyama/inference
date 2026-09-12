@@ -73,6 +73,16 @@ def test_get_path_size_never_traverses_directory_symlinks(tmp_path):
     assert get_path_size(str(cache_dir), follow_file_symlinks=True) == 0
 
 
+def test_get_path_size_follows_root_directory_symlink(tmp_path):
+    cache_dir = tmp_path / "cache"
+    cache_dir.mkdir()
+    (cache_dir / "payload.bin").write_bytes(b"x" * 4096)
+    cache_link = tmp_path / "cache-link"
+    cache_link.symlink_to(cache_dir, target_is_directory=True)
+
+    assert get_path_size(str(cache_link)) == get_path_size(str(cache_dir))
+
+
 def test_replica_model_uid():
     all_gen_ids = []
     for replica_model_uid in iter_replica_model_uid("abc", 5):
