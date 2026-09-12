@@ -271,10 +271,7 @@ def create_audio_model_instance(
     ):
         raise ValueError("MiniMax-Music3 requires an NVIDIA CUDA device.")
 
-    if (
-        model_spec.model_family == "yue2"
-        and model_spec.model_name not in AUDIO_ENGINES
-    ):
+    if model_spec.model_family == "yue2" and model_spec.model_name not in AUDIO_ENGINES:
         raise ValueError("YuE2 requires an NVIDIA CUDA device.")
 
     # Engine-aware dispatch for model families with multiple engines

@@ -89,9 +89,7 @@ class YuE2Model:
         config.update(self._kwargs)
         unknown = sorted(set(config) - self._initialize_options)
         if unknown:
-            raise ValueError(
-                "Unsupported YuE2 load option(s): " + ", ".join(unknown)
-            )
+            raise ValueError("Unsupported YuE2 load option(s): " + ", ".join(unknown))
         return config
 
     def _download_vae(self) -> str:
@@ -140,9 +138,7 @@ class YuE2Model:
 
         device = self._device or get_available_device()
         if torch.device(device).type != "cuda":
-            raise ValueError(
-                f"YuE2 requires a CUDA device, but received {device!r}."
-            )
+            raise ValueError(f"YuE2 requires a CUDA device, but received {device!r}.")
         self._device = str(torch.device(device))
 
         vae_path = self._download_vae()

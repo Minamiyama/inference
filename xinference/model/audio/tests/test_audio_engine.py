@@ -46,8 +46,8 @@ from ..engine import (
     PyTorchKokoroAudioModel,
     PyTorchMeloTTSAudioModel,
     PyTorchQwen3TTSAudioModel,
-    PyTorchYuE2AudioModel,
     PyTorchVoxCPMAudioModel,
+    PyTorchYuE2AudioModel,
     TransformersQwen3ASRAudioModel,
     TransformersWhisperAudioModel,
     VLLMQwen3ASRAudioModel,
@@ -346,9 +346,7 @@ def test_yue2_pytorch_engine_matches_cuda_model_spec():
         PyTorchYuE2AudioModel.__module__, fromlist=["has_cuda_device"]
     )
     with patch.object(engine_mod, "has_cuda_device", return_value=True):
-        assert PyTorchYuE2AudioModel.match(
-            _get_spec("YuE2-3B")
-        ) is True
+        assert PyTorchYuE2AudioModel.match(_get_spec("YuE2-3B")) is True
 
 
 def test_consolidated_mlx_specs_and_legacy_aliases(apple_mlx_engines):

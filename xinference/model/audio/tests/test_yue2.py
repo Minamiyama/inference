@@ -71,9 +71,7 @@ def _install_fake_yue2_runtime(monkeypatch):
 
 def test_load_uses_cached_model_and_matching_vae_source(monkeypatch, model_spec):
     pipeline = _install_fake_yue2_runtime(monkeypatch)
-    model = YuE2Model(
-        "yue2-test", "/models/YuE2-3B", model_spec, device="cuda:1"
-    )
+    model = YuE2Model("yue2-test", "/models/YuE2-3B", model_spec, device="cuda:1")
     download_vae = Mock(return_value="/models/YuE2-Vae")
     monkeypatch.setattr(model, "_download_vae", download_vae)
 
