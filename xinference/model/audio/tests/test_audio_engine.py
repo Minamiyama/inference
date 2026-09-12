@@ -46,6 +46,7 @@ from ..engine import (
     PyTorchKokoroAudioModel,
     PyTorchMeloTTSAudioModel,
     PyTorchQwen3TTSAudioModel,
+    PyTorchYuE2AudioModel,
     PyTorchVoxCPMAudioModel,
     TransformersQwen3ASRAudioModel,
     TransformersWhisperAudioModel,
@@ -303,6 +304,51 @@ def test_minimax_music3_without_cuda_is_rejected_before_download():
                 enable_virtual_env=False,
             )
     cache.assert_not_called()
+
+
+def test_yue2_registration_includes_matching_model_and_vae_sources():
+    specs = {spec.model_hub: spec for spec in BUILTIN_AUDIO_MODELS["YuE2-3B"]}
+
+    assert set(specs) == {"huggingface", "modelscope"}
+    assert specs["huggingface"].model_id == "m-a-p/YuE2-3B"
+    assert specs["huggingface"].model_revision == "main"
+    assert specs["huggingface"].vae_model_id == "m-a-p/YuE2-Vae"
+    assert specs["huggingface"].vae_model_revision == "main"
+    assert specs["modelscope"].model_id == "m-a-p/YuE2-3B"
+    assert specs["modelscope"].model_revision == "master"
+    assert specs["modelscope"].vae_model_id == "m-a-p/YuE2-Vae"
+    assert specs["modelscope"].vae_model_revision == "master"
+
+
+def test_yue2_without_cuda_is_rejected_before_download():
+    engine_mod = __import__(
+        register_builtin_audio_engines.__module__, fromlist=["has_cuda_device"]
+    )
+    with (
+        patch.object(engine_mod, "has_cuda_device", return_value=False),
+        patch.dict(AUDIO_ENGINES, {}, clear=True),
+        patch.object(CacheManager, "cache") as cache,
+    ):
+        register_builtin_audio_engines()
+        for model_spec in BUILTIN_AUDIO_MODELS["YuE2-3B"]:
+            generate_engine_config_by_model_name(model_spec)
+        with pytest.raises(ValueError, match="YuE2 requires an NVIDIA CUDA device"):
+            create_audio_model_instance(
+                "uid",
+                "YuE2-3B",
+                enable_virtual_env=False,
+            )
+    cache.assert_not_called()
+
+
+def test_yue2_pytorch_engine_matches_cuda_model_spec():
+    engine_mod = __import__(
+        PyTorchYuE2AudioModel.__module__, fromlist=["has_cuda_device"]
+    )
+    with patch.object(engine_mod, "has_cuda_device", return_value=True):
+        assert PyTorchYuE2AudioModel.match(
+            _get_spec("YuE2-3B")
+        ) is True
 
 
 def test_consolidated_mlx_specs_and_legacy_aliases(apple_mlx_engines):

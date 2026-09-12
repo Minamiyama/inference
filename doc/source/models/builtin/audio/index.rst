@@ -121,3 +121,5 @@ The following is a list of built-in audio models in Xinference:
    whisper-tiny
   
    whisper-tiny.en
+
+   yue2-3b
