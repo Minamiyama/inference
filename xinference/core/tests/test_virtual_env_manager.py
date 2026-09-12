@@ -1416,7 +1416,9 @@ def test_remove_virtual_env_allows_delete_after_final_release(tmp_path, monkeypa
     assert not env_path.exists()
 
 
-def test_list_virtual_env_packages_returns_direct_distribution_sizes(tmp_path, monkeypatch):
+def test_list_virtual_env_packages_returns_direct_distribution_sizes(
+    tmp_path, monkeypatch
+):
     from xinference.core import virtual_env_manager
 
     virtual_env_root = tmp_path / "virtualenv"
@@ -1429,7 +1431,9 @@ def test_list_virtual_env_packages_returns_direct_distribution_sizes(tmp_path, m
     package_file.parent.mkdir(parents=True)
     metadata_file.parent.mkdir()
     package_file.write_text("value = 1\n")
-    metadata_file.write_text("Metadata-Version: 2.1\nName: demo-package\nVersion: 1.2.3\n")
+    metadata_file.write_text(
+        "Metadata-Version: 2.1\nName: demo-package\nVersion: 1.2.3\n"
+    )
     record_file.write_text(
         "demo_package/__init__.py,,\n"
         "demo_package-1.2.3.dist-info/METADATA,,\n"
@@ -1451,7 +1455,8 @@ def test_list_virtual_env_packages_returns_direct_distribution_sizes(tmp_path, m
             "name": "demo-package",
             "version": "1.2.3",
             "size_bytes": sum(
-                path.stat().st_size for path in (package_file, metadata_file, record_file)
+                path.stat().st_size
+                for path in (package_file, metadata_file, record_file)
             ),
         }
     ]

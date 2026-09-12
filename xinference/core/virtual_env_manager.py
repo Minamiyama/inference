@@ -836,9 +836,7 @@ class VirtualEnvManager:
     ) -> Dict[str, Any]:
         """List distributions installed directly in one virtual environment."""
         if not model_name or not model_engine or not python_version:
-            raise ValueError(
-                "model_name, model_engine and python_version are required"
-            )
+            raise ValueError("model_name, model_engine and python_version are required")
 
         environments = [
             environment
